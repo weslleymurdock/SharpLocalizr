@@ -1,8 +1,8 @@
 {
   "platformOptions": {
     "Coverlet": {
-      "include": "[Localizr*]*",
-      "exclude": "[FluentValidation*]*,[Mediator*]*,[Microsoft.*]*,[System.*]*,[NSubstitute*]*,[Castle.*]*,[xunit.*]*,[coverlet.*]*,[testhost*]*,[Microsoft.Testing.*]*",
+      "include": "[Localizr.Application]*,[Localizr.Domain]*,[Localizr.Infrastructure]*,[Localizr]*",
+      "exclude": "[Localizr.UnitTests]*,[FluentValidation*]*,[Mediator*]*,[Microsoft.*]*,[System.*]*,[NSubstitute*]*,[Castle.*]*,[xunit.*]*,[coverlet.*]*,[testhost*]*,[Microsoft.Testing.*]*",
       "excludeByAttribute": "GeneratedCodeAttribute,ExcludeFromCodeCoverageAttribute,CompilerGeneratedAttribute",
       "excludeByFile": "**/*.g.cs,**/*.g.i.cs,**/obj/**/*.cs,**/Migrations/*.cs",
       "format": "cobertura",
