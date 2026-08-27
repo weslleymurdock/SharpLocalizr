@@ -1,4 +1,4 @@
-name: Build
+name: Continuous
 
 on:
   push:
@@ -10,7 +10,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    name: Continuous Integration
+    name: Integration
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -21,12 +21,12 @@ jobs:
           global-json-file: ${{ github.workspace }}/global.json
 
       - name: Build
-        working-directory: ${{ github.workspace }}/src/Localizr
-        run: dotnet build
+        run: dotnet build SharpLocalizr.slnx
 
   test:
     runs-on: ubuntu-latest
-    name: Continuous Testing
+    name: Testing
+    needs: [build]
     steps:
       - name: Checkout
         uses: actions/checkout@v7

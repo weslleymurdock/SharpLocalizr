@@ -16,7 +16,7 @@ public sealed class TranslateResourceCommandValidatorTests
         TranslateResourceCommand command = new(new Dictionary<string, string>(), "pt-BR");
 
         TestValidationResult<TranslateResourceCommand> result =
-            await _validator.TestValidateAsync(command, TestContext.Current.CancellationToken);
+            await _validator.TestValidateAsync(command, null, TestContext.Current.CancellationToken);
 
         result.ShouldHaveValidationErrorFor(x => x.Resources);
     }
@@ -28,7 +28,7 @@ public sealed class TranslateResourceCommandValidatorTests
         TranslateResourceCommand command = new(new Dictionary<string, string> { ["Hello"] = "Hello" }, string.Empty);
 
         TestValidationResult<TranslateResourceCommand> result =
-            await _validator.TestValidateAsync(command, TestContext.Current.CancellationToken);
+            await _validator.TestValidateAsync(command, null, TestContext.Current.CancellationToken);
 
         result.ShouldHaveValidationErrorFor(x => x.Culture);
     }
@@ -40,7 +40,7 @@ public sealed class TranslateResourceCommandValidatorTests
         TranslateResourceCommand command = new(new Dictionary<string, string> { ["Hello"] = "Hello" }, "invalid_culture_name");
 
         TestValidationResult<TranslateResourceCommand> result =
-            await _validator.TestValidateAsync(command, TestContext.Current.CancellationToken);
+            await _validator.TestValidateAsync(command, null, TestContext.Current.CancellationToken);
 
         result.ShouldHaveValidationErrorFor(x => x.Culture);
     }
@@ -52,7 +52,7 @@ public sealed class TranslateResourceCommandValidatorTests
         TranslateResourceCommand command = new(new Dictionary<string, string> { ["Hello"] = "Hello" }, "pt-BR");
 
         TestValidationResult<TranslateResourceCommand> result =
-            await _validator.TestValidateAsync(command, TestContext.Current.CancellationToken);
+            await _validator.TestValidateAsync(command, null, TestContext.Current.CancellationToken);
 
         result.ShouldNotHaveAnyValidationErrors();
     }

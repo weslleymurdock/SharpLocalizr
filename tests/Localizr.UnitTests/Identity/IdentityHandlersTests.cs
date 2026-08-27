@@ -60,7 +60,7 @@ public sealed class IdentityHandlersTests
         Assert.False(result.Succeeded);
         Assert.Null(result.Data);
         Assert.Single(result.Errors);
-        Assert.Equal("Invalid credentials.", result.Errors[0]);
+        Assert.Equal("Invalid credentials.", result.Errors());
     }
 
     /// <summary>Verifies successful refresh returns the replacement token pair.</summary>
@@ -86,7 +86,7 @@ public sealed class IdentityHandlersTests
 
         Assert.False(result.Succeeded);
         Assert.Single(result.Errors);
-        Assert.Equal("Invalid refresh token.", result.Errors[0]);
+        Assert.Equal("Invalid refresh token.", result.Errors.First());
     }
 
     /// <summary>Verifies token revocation delegates to the identity service.</summary>
@@ -161,7 +161,7 @@ public sealed class IdentityHandlersTests
         Assert.False(result.Succeeded);
         Assert.Null(result.Data);
         Assert.Single(result.Errors);
-        Assert.Equal("User not found.", result.Errors[0]);
+        Assert.Equal("User not found.", result.Errors.First());
     }
 
     /// <summary>Verifies an existing identity is returned unchanged.</summary>
@@ -205,7 +205,7 @@ public sealed class IdentityHandlersTests
         Assert.False(result.Succeeded);
         Assert.Null(result.Data);
         Assert.Single(result.Errors);
-        Assert.Equal("Invalid 2FA configuration.", result.Errors[0]);
+        Assert.Equal("Invalid 2FA configuration.", result.Errors.First());
     }
 
     /// <summary>Verifies successful two-factor configuration returns the service response.</summary>
