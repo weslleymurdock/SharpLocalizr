@@ -8,5 +8,5 @@ namespace Localizr.Application.Localization.Commands;
 /// <param name="Resources">The source resource entries to translate.</param>
 /// <param name="Culture">The target culture name.</param>
 public sealed record TranslateResourceCommand(
-    IReadOnlyDictionary<string, string> Resources,
+    Dictionary<string, string> Resources,
     string Culture) : IRequest<Response<TranslateResourceResponse>>;
