@@ -4,11 +4,14 @@ using Localizr.Application.Common.Pipeline.Validation;
 using Localizr.Application.Identity.Abstractions;
 using Localizr.Application.Identity.Handlers;
 using Localizr.Application.Identity.Validators;
+using Localizr.Application.Localization.Abstractions;
 using Localizr.Infrastructure.Common.Repository;
 using Localizr.Infrastructure.Common.UnitOfWork;
 using Localizr.Infrastructure.Identity.Models;
 using Localizr.Infrastructure.Identity.Options;
 using Localizr.Infrastructure.Identity.Services;
+using Localizr.Infrastructure.Localization.Options;
+using Localizr.Infrastructure.Localization.Services;
 using Localizr.Infrastructure.Persistence;
 using Localizr.Infrastructure.Persistence.Middlewares;
 using FluentValidation;
@@ -35,9 +38,7 @@ public static class WebApplicationBuilderExtensions
         /// <typeparam name="TProgram">The program type.</typeparam>
         /// <typeparam name="TApp">The root component.</typeparam>
         /// <returns>A task for application startup.</returns>
-        public async Task RunLocalizrAsync<
-            TProgram,
-            TApp>(Action<WebApplicationBuilder> configureMudBlazor)
+        public async Task RunLocalizrAsync<TProgram, TApp>(Action<WebApplicationBuilder> configureMudBlazor)
             where TProgram : class
             where TApp : IComponent
         {
@@ -47,18 +48,14 @@ public static class WebApplicationBuilderExtensions
             builder.Services.AddSignalR();
             builder.Services.AddOpenApi();
             configureMudBlazor?.Invoke(builder);
-            builder.Services.Configure<JwtOptions>(
-                builder.Configuration.GetSection(
-                    JwtOptions.SectionName));
+            builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
+            builder.Services.Configure<GoogleTranslateOptions>(builder.Configuration.GetSection(GoogleTranslateOptions.SectionName));
 
-            builder.Services.AddDbContext<LocalizrDbContext>(
-                options => options.UseSqlServer(
-                    builder.Configuration
-                        .GetConnectionString("Localizr"),
-                    sql => sql.CommandTimeout(90)));
+            builder.Services.AddDbContext<LocalizrDbContext>(options => options.UseSqlServer(
+                builder.Configuration.GetConnectionString("Localizr"),
+                sql => sql.CommandTimeout(90)));
 
-            builder.Services.AddIdentityCore<User>(
-                options =>
+            builder.Services.AddIdentityCore<User>(options =>
                 {
                     options.User.RequireUniqueEmail = true;
                     options.SignIn.RequireConfirmedEmail = false;
@@ -68,8 +65,7 @@ public static class WebApplicationBuilderExtensions
                     options.Password.RequireLowercase = true;
                     options.Password.RequireNonAlphanumeric = true;
                     options.Lockout.MaxFailedAccessAttempts = 5;
-                    options.Lockout.DefaultLockoutTimeSpan =
-                        TimeSpan.FromMinutes(15);
+                    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
                 })
                 .AddRoles<Role>()
                 .AddEntityFrameworkStores<LocalizrDbContext>()
@@ -82,6 +78,15 @@ public static class WebApplicationBuilderExtensions
             builder.Services.AddScoped<IIdentityEmailSender, LoggingIdentityEmailSender>();
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
             builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+            builder.Services.AddScoped<ITranslatorService, TranslatorService>();
+            builder.Services.AddHttpClient<TranslatorService>((serviceProvider, client) =>
+            {
+                GoogleTranslateOptions options = serviceProvider
+                    .GetRequiredService<Microsoft.Extensions.Options.IOptions<GoogleTranslateOptions>>()
+                    .Value;
+
+                client.BaseAddress = new Uri(options.Endpoint, UriKind.Absolute);
+            });
             builder.Services.AddValidatorsFromAssemblyContaining<RegisterCommandValidator>();
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
@@ -89,65 +94,43 @@ public static class WebApplicationBuilderExtensions
                     JwtOptions jwt = builder.Configuration
                         .GetSection(JwtOptions.SectionName)
                         .Get<JwtOptions>()
-                        ?? throw new InvalidOperationException(
-                            "JWT configuration is missing.");
+                        ?? throw new InvalidOperationException("JWT configuration is missing.");
 
                     if (Encoding.UTF8.GetByteCount(jwt.Key) < 32)
                     {
-                        throw new InvalidOperationException(
-                            "Jwt:Key must contain 256 bits.");
+                        throw new InvalidOperationException("Jwt:Key must contain 256 bits.");
                     }
 
-                    options.TokenValidationParameters =
-                        new TokenValidationParameters
-                        {
-                            ValidateIssuerSigningKey = true,
-                            IssuerSigningKey =
-                                new SymmetricSecurityKey(
-                                    Encoding.UTF8.GetBytes(
-                                        jwt.Key)),
-                            ValidateIssuer = true,
-                            ValidIssuer = jwt.Issuer,
-                            ValidateAudience = true,
-                            ValidAudience = jwt.Audience,
-                            ValidateLifetime = true,
-                            ClockSkew = TimeSpan.FromSeconds(30)
-                        };
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuerSigningKey = true,
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.Key)),
+                        ValidateIssuer = true,
+                        ValidIssuer = jwt.Issuer,
+                        ValidateAudience = true,
+                        ValidAudience = jwt.Audience,
+                        ValidateLifetime = true,
+                        ClockSkew = TimeSpan.FromSeconds(30)
+                    };
 
                     options.Events = new JwtBearerEvents
                     {
                         OnTokenValidated = context =>
                         {
-                            JwtSecurityToken? token =
-                                context.SecurityToken
-                                    as JwtSecurityToken;
-                            string? tokenType = token?
-                                .Claims
-                                .FirstOrDefault(
-                                    claim => claim.Type ==
-                                        JwtRegisteredClaimNames.Typ)
-                                ?.Value;
+                            JwtSecurityToken? token = context.SecurityToken as JwtSecurityToken;
+                            string? tokenType = token?.Claims.FirstOrDefault(
+                                claim => claim.Type == JwtRegisteredClaimNames.Typ)?.Value;
 
-                            if (!string.Equals(
-                                tokenType,
-                                "access",
-                                StringComparison.Ordinal))
+                            if (!string.Equals(tokenType, "access", StringComparison.Ordinal))
                             {
-                                context.Fail(
-                                    "The token is not an access token.");
+                                context.Fail("The token is not an access token.");
                                 return Task.CompletedTask;
                             }
 
-                            if (token is not null &&
-                                context.HttpContext
-                                    .RequestServices
-                                    .GetRequiredService<
-                                        IRevokedTokenStore>()
-                                    .IsRevoked(token.Id))
+                            if (token is not null && context.HttpContext.RequestServices
+                                .GetRequiredService<IRevokedTokenStore>().IsRevoked(token.Id))
                             {
-                                context.Fail(
-                                    "The access token "
-                                    + "has been revoked.");
+                                context.Fail("The access token has been revoked.");
                             }
 
                             return Task.CompletedTask;
@@ -156,23 +139,15 @@ public static class WebApplicationBuilderExtensions
                 });
 
             builder.Services.AddAuthorizationBuilder()
-                .AddPolicy(
-                    IdentityPolicies.Administrator,
-                    policy => policy.RequireClaim(
-                        IdentityClaimTypes.Permission,
-                        "system.admin"))
-                .AddPolicy(
-                    IdentityPolicies.User,
-                    policy => policy.RequireClaim(
-                        IdentityClaimTypes.Permission,
-                        "system.user"));
+                .AddPolicy(IdentityPolicies.Administrator, policy => policy.RequireClaim(
+                    IdentityClaimTypes.Permission, "system.admin"))
+                .AddPolicy(IdentityPolicies.User, policy => policy.RequireClaim(
+                    IdentityClaimTypes.Permission, "system.user"));
 
             builder.Services.AddMediator(options =>
             {
-                options.ServiceLifetime =
-                    ServiceLifetime.Scoped;
-                options.Assemblies =
-                    [typeof(IdentityHandlers).Assembly];
+                options.ServiceLifetime = ServiceLifetime.Scoped;
+                options.Assemblies = [typeof(IdentityHandlers).Assembly];
                 options.PipelineBehaviors =
                 [
                     typeof(ValidationMiddleware<,>),
