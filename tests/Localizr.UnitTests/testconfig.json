@@ -1,10 +1,10 @@
 {
   "platformOptions": {
     "Coverlet": {
-      "include": "[Localizr]Localizr.Controllers.v1.LocalizationController,[Localizr.Application]Localizr.Application.Localization.*,[Localizr.Application]Localizr.Application.Identity.Handlers.IdentityHandlers,[Localizr.Infrastructure]Localizr.Infrastructure.Localization.*",
-      "exclude": "[Localizr]Microsoft.AspNetCore.OpenApi.Generated*,[Localizr]Microsoft.AspNetCore.Components.*.g__*,[Localizr]Microsoft.Extensions.*.g__*,[Localizr]System.*,[Mediator.SourceGenerator]Mediator.*,[Mediator]Mediator.*",
+      "include": "[Localizr*]*",
+      "exclude": "[FluentValidation*]*,[Mediator*]*,[Microsoft.*]*,[System.*]*,[NSubstitute*]*,[Castle.*]*,[xunit.*]*,[coverlet.*]*,[testhost*]*,[Microsoft.Testing.*]*",
       "excludeByAttribute": "GeneratedCodeAttribute,ExcludeFromCodeCoverageAttribute,CompilerGeneratedAttribute",
-      "excludeByFile": "**/*.g.cs,**/*.g.i.cs,**/obj/**/*.cs",
+      "excludeByFile": "**/*.g.cs,**/*.g.i.cs,**/obj/**/*.cs,**/Migrations/*.cs",
       "format": "cobertura",
       "includeTestAssembly": false,
       "skipAutoProps": false,

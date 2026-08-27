@@ -4,7 +4,6 @@ using Localizr.Infrastructure.Localization.Exceptions;
 using Localizr.Infrastructure.Localization.Options;
 using Localizr.Infrastructure.Localization.Services;
 using Microsoft.Extensions.Options;
-using NSubstitute;
 
 namespace Localizr.UnitTests.Localization;
 
@@ -48,6 +47,91 @@ public sealed class TranslatorServiceTests
         Assert.Equal("Olá", result["Greeting"]);
     }
 
+    /// <summary>Verifies that an empty resource set does not invoke the provider.</summary>
+    [Fact]
+    public async Task TranslateToCultureAsync_WhenResourcesAreEmpty_ShouldReturnEmptyResult()
+    {
+        using HttpClient client = CreateClient(new TranslationResponseHandler([]));
+        TranslatorService service = CreateService(client);
+
+        Dictionary<string, string> result = await service.TranslateToCultureAsync(
+            new Dictionary<string, string>(),
+            "pt-BR",
+            CancellationToken.None);
+
+        Assert.Empty(result);
+    }
+
+    /// <summary>Verifies that a missing API key is rejected before contacting the provider.</summary>
+    [Fact]
+    public async Task TranslateToCultureAsync_WhenApiKeyIsMissing_ShouldThrowInvalidOperationException()
+    {
+        using HttpClient client = CreateClient(new TranslationResponseHandler(["Olá"]));
+        TranslatorService service = CreateService(client, apiKey: string.Empty);
+
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.TranslateToCultureAsync(new Dictionary<string, string> { ["Greeting"] = "Hello" }, "pt-BR", CancellationToken.None));
+
+        Assert.Contains("API key", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Verifies that an invalid endpoint is rejected before contacting the provider.</summary>
+    [Fact]
+    public async Task TranslateToCultureAsync_WhenEndpointIsInvalid_ShouldThrowInvalidOperationException()
+    {
+        using HttpClient client = CreateClient(new TranslationResponseHandler(["Olá"]));
+        TranslatorService service = CreateService(client, endpoint: "not-a-uri");
+
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.TranslateToCultureAsync(new Dictionary<string, string> { ["Greeting"] = "Hello" }, "pt-BR", CancellationToken.None));
+
+        Assert.Contains("valid absolute URI", exception.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>Verifies that a non-HTTPS endpoint is rejected.</summary>
+    [Fact]
+    public async Task TranslateToCultureAsync_WhenEndpointIsNotHttps_ShouldThrowInvalidOperationException()
+    {
+        using HttpClient client = CreateClient(new TranslationResponseHandler(["Olá"]));
+        TranslatorService service = CreateService(client, endpoint: "http://translation.googleapis.com/");
+
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.TranslateToCultureAsync(new Dictionary<string, string> { ["Greeting"] = "Hello" }, "pt-BR", CancellationToken.None));
+
+        Assert.Contains("HTTPS", exception.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>Verifies that a provider response with an unexpected number of translations is rejected.</summary>
+    [Fact]
+    public async Task TranslateToCultureAsync_WhenProviderReturnsUnexpectedCount_ShouldThrowTranslationProviderException()
+    {
+        using HttpClient client = CreateClient(new TranslationResponseHandler(["Olá"]));
+        TranslatorService service = CreateService(client);
+        Dictionary<string, string> resources = new()
+        {
+            ["Greeting"] = "Hello",
+            ["Description"] = "World"
+        };
+
+        TranslationProviderException exception = await Assert.ThrowsAsync<TranslationProviderException>(() =>
+            service.TranslateToCultureAsync(resources, "pt-BR", CancellationToken.None));
+
+        Assert.Contains("different number", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Verifies that a malformed provider payload is rejected.</summary>
+    [Fact]
+    public async Task TranslateToCultureAsync_WhenProviderReturnsMalformedPayload_ShouldThrowTranslationProviderException()
+    {
+        using HttpClient client = CreateClient(new TranslationResponseHandler([], payload: new { unexpected = true }));
+        TranslatorService service = CreateService(client);
+
+        TranslationProviderException exception = await Assert.ThrowsAsync<TranslationProviderException>(() =>
+            service.TranslateToCultureAsync(new Dictionary<string, string> { ["Greeting"] = "Hello" }, "pt-BR", CancellationToken.None));
+
+        Assert.Contains("invalid response payload", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
     /// <summary>Verifies that a provider HTTP failure is exposed as a provider exception.</summary>
     [Fact]
     public async Task TranslateToCultureAsync_WhenProviderFails_ShouldThrowTranslationProviderException()
@@ -75,50 +159,46 @@ public sealed class TranslatorServiceTests
             service.TranslateToCultureAsync(resources, "pt-BR", cancellationTokenSource.Token));
     }
 
-    private static TranslatorService CreateService(HttpClient client)
+    private static TranslatorService CreateService(
+        HttpClient client,
+        string apiKey = "test-key",
+        string endpoint = "https://translation.googleapis.com/")
     {
         var optionsValues = new GoogleTranslateOptions
         {
-            ApiKey = "test-key",
-            Endpoint = "https://translation.googleapis.com/"
+            ApiKey = apiKey,
+            Endpoint = endpoint
         };
 
         IOptionsFactory<GoogleTranslateOptions> factory = new OptionsFactory<GoogleTranslateOptions>(
             Enumerable.Empty<IConfigureOptions<GoogleTranslateOptions>>(),
             Enumerable.Empty<IPostConfigureOptions<GoogleTranslateOptions>>(),
-            Enumerable.Empty<IValidateOptions<GoogleTranslateOptions>>()
-        );
+            Enumerable.Empty<IValidateOptions<GoogleTranslateOptions>>());
 
         var optionsMonitor = new OptionsMonitor<GoogleTranslateOptions>(
             factory,
             Enumerable.Empty<IOptionsChangeTokenSource<GoogleTranslateOptions>>(),
-            new OptionsCache<GoogleTranslateOptions>()
-        );
+            new OptionsCache<GoogleTranslateOptions>());
 
         optionsMonitor.CurrentValue.ApiKey = optionsValues.ApiKey;
         optionsMonitor.CurrentValue.Endpoint = optionsValues.Endpoint;
 
-        return new TranslatorService(
-            client,
-            optionsMonitor,
-            usageTracker: Substitute.For<GoogleTranslateUsageTracker>() 
-        );
+        return new TranslatorService(client, optionsMonitor, new GoogleTranslateUsageTracker());
     }
 
     private static HttpClient CreateClient(HttpMessageHandler handler)
     {
-        HttpClient client = new(handler)
+        return new HttpClient(handler)
         {
             BaseAddress = new Uri("https://translation.googleapis.com/")
         };
-
-        return client;
     }
 
     private sealed class TranslationResponseHandler(
         IReadOnlyList<string> translations,
         HttpStatusCode statusCode = HttpStatusCode.OK,
-        TimeSpan? delay = null) : HttpMessageHandler
+        TimeSpan? delay = null,
+        object? payload = null) : HttpMessageHandler
     {
         protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
@@ -139,7 +219,7 @@ public sealed class TranslatorServiceTests
 
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = JsonContent.Create(new
+                Content = JsonContent.Create(payload ?? new
                 {
                     data = new
                     {
