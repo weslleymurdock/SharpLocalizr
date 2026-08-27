@@ -5,10 +5,10 @@
 <MudSnackbarProvider />
 <MudLayout>
     <MudAppBar>
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => _drawerOpen = !_drawerOpen)" />
-        #Localizr
+        <MudIconButton Icon="@(_drawerOpen ? Icons.Material.Filled.MenuOpen : Icons.Material.Filled.Menu)" Color=Color.Inherit Edge="Edge.Start" OnClick="@((e) => _drawerOpen = !_drawerOpen)" />
+        <MudText Typo="Typo.h6">SharpLocalizr</MudText>
     </MudAppBar>
-    <MudDrawer @bind-Open="@_drawerOpen">
+    <MudDrawer @bind-Open="@_drawerOpen"  ClipMode="DrawerClipMode.Always" >
         <NavMenu />
     </MudDrawer>
     <MudMainContent>
@@ -17,9 +17,12 @@
 </MudLayout>
  
 <div id="blazor-error-ui" data-nosnippet>
-    An unhandled error has occurred.
-    <a href="." class="reload">Reload</a>
-    <span class="dismiss">🗙</span>
+    <MudAlert Severity="Severity.Error" Variant="Variant.Filled">    
+        <MudText >An unhandled error has occurred.</MudText>
+    </MudAlert>
+    <MudIconButton Icon="@Icons.Material.Filled.Refresh" Href="." Class="reload"/>
+    <MudIconButton Icon="@Icons.Material.Filled.Close" Class="dismiss"/>
+
 </div>
 
 @code {
