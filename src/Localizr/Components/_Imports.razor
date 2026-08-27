@@ -1,11 +1,17 @@
-﻿@using System.Net.Http
-@using System.Net.Http.Json
+﻿@using Localizr
+@using Localizr.Application.Common.Responses
+@using Localizr.Application.Localization.Commands
+@using Localizr.Application.Localization.Responses
+@using Localizr.Components
+@using Localizr.Components.Layout
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Routing
 @using Microsoft.AspNetCore.Components.Web
-@using static Microsoft.AspNetCore.Components.Web.RenderMode
 @using Microsoft.AspNetCore.Components.Web.Virtualization
+@using static Microsoft.AspNetCore.Components.Web.RenderMode
 @using Microsoft.JSInterop
-@using Localizr
-@using Localizr.Components
-@using Localizr.Components.Layout
+@using Mediator
+@using MudBlazor
+@using System.Net.Http
+@using System.Net.Http.Json
+@inject IMediator Mediator

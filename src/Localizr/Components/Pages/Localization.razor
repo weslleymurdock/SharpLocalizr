@@ -1,18 +1,9 @@
-@page "/localization"
-@rendermode InteractiveServer
+@page "/localization" 
 @implements IDisposable
-
-@using Localizr.Application.Common.Responses
-@using Localizr.Application.Localization.Commands
-@using Localizr.Application.Localization.Responses
-@using Mediator
-@using Microsoft.AspNetCore.Components.Forms
-@using MudBlazor
-@inject IMediator Mediator
 
 <PageTitle>Resource Localization</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Medium" Class="pa-4">
+<MudContainer MaxWidth="MaxWidth.Large" Class="pa-4">
     <MudPaper Elevation="2" Class="pa-6">
         <MudStack Spacing="3">
             <MudText Typo="Typo.h4">Resource Localization</MudText>
@@ -79,7 +70,7 @@
 </MudContainer>
 
 @code {
-    private const long MaxFileSize = 1_048_576;
+    private const long MaxFileSize = 1_048_576;  
     private readonly CancellationTokenSource cancellationTokenSource = new();
     private string resourceJson = "{\n  \"Hello\": \"Hello world\"\n}";
     private string culture = "pt-BR";

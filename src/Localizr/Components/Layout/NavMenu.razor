@@ -1,36 +1,12 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">Localizr</a>
-    </div>
-</div>
+﻿@inject NavigationManager Navigation
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+<MudStack Class="pa-4" Spacing="1">
+    <MudText Typo="Typo.h6">Ampere OS</MudText>
+    <MudDivider Class="mb-2" />
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="nav flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="localization">
-                <span class="bi bi-translate" aria-hidden="true"></span> Localization
-            </NavLink>
-        </div>
-    </nav>
-</div>
-
+    <MudNavMenu Color="Color.Primary">
+        <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Start</MudNavLink>
+        <MudNavLink Href="/localization" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Localization</MudNavLink>
+        <MudNavLink Href="/settings" Icon="@Icons.Material.Filled.WbSunny">Options and Settings</MudNavLink>
+    </MudNavMenu>
+</MudStack>
