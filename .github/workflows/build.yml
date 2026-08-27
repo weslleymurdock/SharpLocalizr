@@ -1,0 +1,26 @@
+name: Build
+
+on: 
+  push:
+    tags: ["v*"]
+  pull_request: 
+    types: ["opened", "synchronize", "reopened"]
+  workflow_dispatch: 
+
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Continuous Integration
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET 
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: ${{ github.workspace }}/global.json
+
+      - name: Build 
+        working-directory: ${{ github.workspace }}/src/Localizr
+        run: dotnet build
