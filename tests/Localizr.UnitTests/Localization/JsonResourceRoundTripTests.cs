@@ -33,7 +33,7 @@ public sealed class JsonResourceRoundTripTests
     public async Task ReadAsync_WhenCanceled_ShouldThrowOperationCanceledException()
     {
         await using MemoryStream stream = new();
-        await JsonSerializer.SerializeAsync(stream, new Dictionary<string, string> { ["Key"] = "Value" });
+        await JsonSerializer.SerializeAsync(stream, new Dictionary<string, string> { ["Key"] = "Value" }, new JsonSerializerOptions(){ WriteIndented = true }, TestContext.Current.CancellationToken);
         stream.Position = 0;
 
         using CancellationTokenSource cancellationTokenSource = new();

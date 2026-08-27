@@ -60,7 +60,7 @@ public sealed class IdentityHandlersTests
         Assert.False(result.Succeeded);
         Assert.Null(result.Data);
         Assert.Single(result.Errors);
-        Assert.Equal("Invalid credentials.", result.Errors());
+        Assert.Equal("Invalid credentials.", result.Errors.First());
     }
 
     /// <summary>Verifies successful refresh returns the replacement token pair.</summary>

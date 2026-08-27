@@ -21,7 +21,7 @@ public sealed class JsonResourceWriterTests
 
         await writer.WriteAsync(resources, stream, CancellationToken.None);
         stream.Position = 0;
-        using JsonDocument document = await JsonDocument.ParseAsync(stream);
+        using JsonDocument document = await JsonDocument.ParseAsync(stream, default!, TestContext.Current.CancellationToken);
 
         Assert.Equal("Olá", document.RootElement.GetProperty("Hello").GetString());
         Assert.Equal("Até logo", document.RootElement.GetProperty("Goodbye").GetString());
@@ -36,7 +36,7 @@ public sealed class JsonResourceWriterTests
 
         await writer.WriteAsync(new Dictionary<string, string>(), stream, CancellationToken.None);
         stream.Position = 0;
-        using JsonDocument document = await JsonDocument.ParseAsync(stream);
+        using JsonDocument document = await JsonDocument.ParseAsync(stream, default!, TestContext.Current.CancellationToken);
 
         Assert.Equal(JsonValueKind.Object, document.RootElement.ValueKind);
         Assert.Empty(document.RootElement.EnumerateObject());
@@ -56,7 +56,7 @@ public sealed class JsonResourceWriterTests
             CancellationToken.None);
         stream.Position = 0;
         using StreamReader reader = new(stream, Encoding.UTF8, leaveOpen: true);
-        string json = await reader.ReadToEndAsync();
+        string json = await reader.ReadToEndAsync(TestContext.Current.CancellationToken);
         using JsonDocument document = JsonDocument.Parse(json);
 
         Assert.Equal(value, document.RootElement.GetProperty("Message").GetString());

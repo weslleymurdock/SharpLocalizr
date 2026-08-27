@@ -21,7 +21,7 @@ jobs:
           global-json-file: ${{ github.workspace }}/global.json
 
       - name: Build
-        run: dotnet build SharpLocalizr.slnx
+        run: dotnet build SharpLocalizr.slnx -c Release
 
   test:
     runs-on: ubuntu-latest
