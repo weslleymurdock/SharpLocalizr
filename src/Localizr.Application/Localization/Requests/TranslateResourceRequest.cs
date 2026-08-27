@@ -4,5 +4,5 @@ namespace Localizr.Application.Localization.Requests;
 /// <param name="Resources">The source resource entries.</param>
 /// <param name="Culture">The target culture name.</param>
 public sealed record TranslateResourceRequest(
-    IReadOnlyDictionary<string, string> Resources,
+    Dictionary<string, string> Resources,
     string Culture);
