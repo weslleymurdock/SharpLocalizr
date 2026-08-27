@@ -1,0 +1,102 @@
+@page "/localization"
+@rendermode InteractiveServer
+
+@using System.Net.Http.Json
+@using Localizr.Application.Localization.Requests
+@using Localizr.Application.Localization.Responses
+@inject HttpClient Http
+
+<PageTitle>Resource Localization</PageTitle>
+
+<h1>Resource Localization</h1>
+
+<p>Translate a JSON resource to a target culture.</p>
+
+<div class="mb-3">
+    <label for="resource-json" class="form-label">Neutral JSON resource</label>
+    <textarea id="resource-json" class="form-control" rows="12" @bind="resourceJson" placeholder='{"Hello":"Hello world"}'></textarea>
+</div>
+
+<div class="mb-3">
+    <label for="target-culture" class="form-label">Target culture</label>
+    <input id="target-culture" class="form-control" @bind="culture" placeholder="pt-BR" />
+</div>
+
+<button class="btn btn-primary" disabled="@isTranslating" @onclick="TranslateAsync">
+    @(isTranslating ? "Translating..." : "Translate")
+</button>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger mt-3" role="alert">@errorMessage</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(translatedJson))
+{
+    <div class="mt-4">
+        <h2>Translated resource</h2>
+        <textarea class="form-control" rows="12" readonly>@translatedJson</textarea>
+    </div>
+}
+
+@code {
+    private string resourceJson = "{\n  \"Hello\": \"Hello world\"\n}";
+    private string culture = "pt-BR";
+    private string? translatedJson;
+    private string? errorMessage;
+    private bool isTranslating;
+
+    private async Task TranslateAsync()
+    {
+        errorMessage = null;
+        translatedJson = null;
+        isTranslating = true;
+
+        try
+        {
+            Dictionary<string, string>? resources =
+                System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(resourceJson);
+
+            if (resources is null || resources.Count == 0)
+            {
+                errorMessage = "The JSON resource must contain at least one key/value entry.";
+                return;
+            }
+
+            HttpResponseMessage response = await Http.PostAsJsonAsync(
+                "/localization/translate",
+                new TranslateResourceRequest(resources, culture));
+
+            if (!response.IsSuccessStatusCode)
+            {
+                errorMessage = $"Translation failed with HTTP status {(int)response.StatusCode}.";
+                return;
+            }
+
+            TranslateResourceResponse? result =
+                await response.Content.ReadFromJsonAsync<TranslateResourceResponse>();
+
+            if (result is null)
+            {
+                errorMessage = "The translation service returned an empty response.";
+                return;
+            }
+
+            translatedJson = System.Text.Json.JsonSerializer.Serialize(
+                result.Resources,
+                new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            errorMessage = "The resource is not valid JSON or does not contain string values.";
+        }
+        catch (HttpRequestException exception)
+        {
+            errorMessage = $"The translation request failed: {exception.Message}";
+        }
+        finally
+        {
+            isTranslating = false;
+        }
+    }
+}
