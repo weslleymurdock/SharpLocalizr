@@ -4,6 +4,7 @@
 @using System.Net.Http.Json
 @using Localizr.Application.Localization.Requests
 @using Localizr.Application.Localization.Responses
+@using Microsoft.AspNetCore.Components.Forms
 @inject HttpClient Http
 
 <PageTitle>Resource Localization</PageTitle>
@@ -13,8 +14,13 @@
 <p>Translate a JSON resource to a target culture.</p>
 
 <div class="mb-3">
-    <label for="resource-json" class="form-label">Neutral JSON resource</label>
-    <textarea id="resource-json" class="form-control" rows="12" @bind="resourceJson" placeholder='{"Hello":"Hello world"}'></textarea>
+    <label for="resource-file" class="form-label">Neutral JSON resource</label>
+    <InputFile id="resource-file" OnChange="LoadResourceAsync" accept=".json,application/json" />
+</div>
+
+<div class="mb-3">
+    <label for="resource-json" class="form-label">Resource JSON</label>
+    <textarea id="resource-json" class="form-control" rows="12" @bind="resourceJson"></textarea>
 </div>
 
 <div class="mb-3">
@@ -40,11 +46,36 @@
 }
 
 @code {
+    private const long MaxFileSize = 1_048_576;
     private string resourceJson = "{\n  \"Hello\": \"Hello world\"\n}";
     private string culture = "pt-BR";
     private string? translatedJson;
     private string? errorMessage;
     private bool isTranslating;
+
+    private async Task LoadResourceAsync(InputFileChangeEventArgs args)
+    {
+        errorMessage = null;
+        translatedJson = null;
+
+        IBrowserFile file = args.File;
+        if (!string.Equals(Path.GetExtension(file.Name), ".json", StringComparison.OrdinalIgnoreCase))
+        {
+            errorMessage = "Only JSON resource files are supported.";
+            return;
+        }
+
+        try
+        {
+            await using Stream stream = file.OpenReadStream(MaxFileSize);
+            using StreamReader reader = new(stream);
+            resourceJson = await reader.ReadToEndAsync();
+        }
+        catch (IOException exception)
+        {
+            errorMessage = $"The resource file could not be read: {exception.Message}";
+        }
+    }
 
     private async Task TranslateAsync()
     {
