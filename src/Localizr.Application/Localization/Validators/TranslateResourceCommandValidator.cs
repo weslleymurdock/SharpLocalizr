@@ -29,7 +29,7 @@ public sealed class TranslateResourceCommandValidator : AbstractValidator<Transl
     {
         try
         {
-            CultureInfo.GetCultureInfo(culture);
+            CultureInfo.GetCultureInfo(culture, predefinedOnly: true);
             return true;
         }
         catch (CultureNotFoundException)
