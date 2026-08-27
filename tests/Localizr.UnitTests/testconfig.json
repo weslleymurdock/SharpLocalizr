@@ -1,0 +1,15 @@
+{
+  "platformOptions": {
+    "Coverlet": {
+      "include": "[Localizr]Localizr.Controllers.*,[Localizr.Application]Localizr.Application.*,[Localizr.Domain]Localizr.Domain.*,[Localizr.Infrastructure]Localizr.Infrastructure.*",
+      "exclude": "[Localizr]Microsoft.AspNetCore.OpenApi.Generated*,[Localizr]Microsoft.AspNetCore.Components.*.g__*,[Localizr]Microsoft.Extensions.*.g__*,[Localizr]System.*,[Mediator.SourceGenerator]Mediator.*,[Mediator]Mediator.*",
+      "excludeByAttribute": "GeneratedCodeAttribute,ExcludeFromCodeCoverageAttribute,CompilerGeneratedAttribute",
+      "excludeByFile": "**/*.g.cs,**/*.g.i.cs,**/obj/**/*.cs",
+      "format": "cobertura",
+      "includeTestAssembly": false,
+      "skipAutoProps": false,
+      "deterministicReport": false,
+      "excludeAssembliesWithoutSources": "MissingAll"
+    }
+  }
+}

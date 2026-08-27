@@ -49,11 +49,7 @@ jobs:
           $outputFile = Join-Path $env:GITHUB_WORKSPACE 'artifacts/test-output.txt'
           & dotnet test $env:GITHUB_WORKSPACE/tests/Localizr.UnitTests/Localizr.UnitTests.csproj `
             --configuration Release `
-            --no-restore `
-            --collect:"XPlat Code Coverage" `
-            --settings $env:GITHUB_WORKSPACE/tests/Localizr.UnitTests/coverlet.runsettings `
-            --results-directory $env:GITHUB_WORKSPACE/artifacts/test-results `
-            --logger "trx;LogFileName=test-results.trx" 2>&1 | Tee-Object -FilePath $outputFile
+            --results-directory $env:GITHUB_WORKSPACE/artifacts/test-results 2>&1 | Tee-Object -FilePath $outputFile
           $exitCode = $LASTEXITCODE
           "dotnet test exit code: $exitCode" | Add-Content -Path $outputFile
           "TEST_EXIT_CODE=$exitCode" | Out-File -FilePath artifacts/test-exit-code.txt -Encoding utf8
@@ -71,9 +67,9 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path artifacts/coverage | Out-Null
-          $coverageFiles = @(Get-ChildItem -Path artifacts/test-results -Filter coverage.cobertura.xml -Recurse -File -ErrorAction SilentlyContinue)
+          $coverageFiles = @(Get-ChildItem -Path artifacts/test-results -Filter 'coverage.cobertura*.xml' -Recurse -File -ErrorAction SilentlyContinue)
           if ($coverageFiles.Count -gt 0) {
-            reportgenerator -reports:"artifacts/test-results/**/coverage.cobertura.xml" -targetdir:"artifacts/coverage" -reporttypes:"MarkdownSummary;Cobertura"
+            reportgenerator -reports:"artifacts/test-results/**/coverage.cobertura*.xml" -targetdir:"artifacts/coverage" -reporttypes:"MarkdownSummary;Cobertura"
           } else {
             "# Coverage report unavailable`n`nCoverlet did not produce a coverage XML file." | Out-File artifacts/coverage/Summary.md -Encoding utf8
           }
@@ -82,12 +78,10 @@ jobs:
         if: always()
         shell: pwsh
         run: |
-          $coverageFiles = @(Get-ChildItem -Path "$env:GITHUB_WORKSPACE/artifacts/test-results" -Directory -ErrorAction SilentlyContinue | ForEach-Object {
-            Get-ChildItem -Path $_.FullName -Filter coverage.cobertura.xml -File -ErrorAction SilentlyContinue
-          })
+          $coverageFiles = @(Get-ChildItem -Path "$env:GITHUB_WORKSPACE/artifacts/test-results" -Filter 'coverage.cobertura*.xml' -Recurse -File -ErrorAction SilentlyContinue)
 
           if ($coverageFiles.Count -eq 0) {
-            "## Coverage gate`n`nNo Coverlet XML was found under the test-results GUID subdirectories." | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+            "## Coverage gate`n`nNo Coverlet XML was found under the test-results directory." | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
             Write-Error "Coverage data was not produced."
             return
           }

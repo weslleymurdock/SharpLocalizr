@@ -1,64 +1,96 @@
 @page "/localization"
 @rendermode InteractiveServer
+@implements IDisposable
 
-@using System.Net.Http.Json
-@using Localizr.Application.Localization.Requests
+@using Localizr.Application.Common.Responses
+@using Localizr.Application.Localization.Commands
 @using Localizr.Application.Localization.Responses
 @using Microsoft.AspNetCore.Components.Forms
-@inject HttpClient Http
+@using MudBlazor
+@inject IMediator Mediator
 
 <PageTitle>Resource Localization</PageTitle>
 
-<h1>Resource Localization</h1>
+<MudContainer MaxWidth="MaxWidth.Medium" Class="pa-4">
+    <MudPaper Elevation="2" Class="pa-6">
+        <MudStack Spacing="3">
+            <MudText Typo="Typo.h4">Resource Localization</MudText>
+            <MudText Typo="Typo.body1">Translate a JSON resource to a target culture.</MudText>
 
-<p>Translate a JSON resource to a target culture.</p>
+            <MudFileUpload T="IBrowserFile"
+                           FilesChanged="LoadResourceAsync"
+                           Accept=".json,application/json"
+                           MaxFileSize="@MaxFileSize">
+                <CustomContent>
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               OnClick="@context.OpenFilePickerAsync"
+                               StartIcon="@Icons.Material.Filled.UploadFile">
+                        Select neutral JSON resource
+                    </MudButton>
+                </CustomContent>
+                <SelectedTemplate>
+                    @if (context is not null)
+                    {
+                        <MudText Typo="Typo.caption">Selected: @context.Name</MudText>
+                    }
+                </SelectedTemplate>
+            </MudFileUpload>
 
-<div class="mb-3">
-    <label for="resource-file" class="form-label">Neutral JSON resource</label>
-    <InputFile id="resource-file" OnChange="LoadResourceAsync" accept=".json,application/json" />
-</div>
+            <MudTextField @bind-Value="resourceJson"
+                          Label="Resource JSON"
+                          Lines="12"
+                          Variant="Variant.Outlined"
+                          FullWidth="true" />
 
-<div class="mb-3">
-    <label for="resource-json" class="form-label">Resource JSON</label>
-    <textarea id="resource-json" class="form-control" rows="12" @bind="resourceJson"></textarea>
-</div>
+            <MudTextField @bind-Value="culture"
+                          Label="Target culture"
+                          Placeholder="pt-BR"
+                          Variant="Variant.Outlined"
+                          FullWidth="true" />
 
-<div class="mb-3">
-    <label for="target-culture" class="form-label">Target culture</label>
-    <input id="target-culture" class="form-control" @bind="culture" placeholder="pt-BR" />
-</div>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       Disabled="@isTranslating"
+                       OnClick="TranslateAsync"
+                       StartIcon="@Icons.Material.Filled.Translate">
+                @(isTranslating ? "Translating..." : "Translate")
+            </MudButton>
 
-<button class="btn btn-primary" disabled="@isTranslating" @onclick="TranslateAsync">
-    @(isTranslating ? "Translating..." : "Translate")
-</button>
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                    @errorMessage
+                </MudAlert>
+            }
 
-@if (!string.IsNullOrWhiteSpace(errorMessage))
-{
-    <div class="alert alert-danger mt-3" role="alert">@errorMessage</div>
-}
-
-@if (!string.IsNullOrWhiteSpace(translatedJson))
-{
-    <div class="mt-4">
-        <h2>Translated resource</h2>
-        <textarea class="form-control" rows="12" readonly>@translatedJson</textarea>
-    </div>
-}
+            @if (!string.IsNullOrWhiteSpace(translatedJson))
+            {
+                <MudText Typo="Typo.h6">Translated resource</MudText>
+                <MudTextField Value="translatedJson"
+                              Lines="12"
+                              Variant="Variant.Outlined"
+                              ReadOnly="true"
+                              FullWidth="true" />
+            }
+        </MudStack>
+    </MudPaper>
+</MudContainer>
 
 @code {
     private const long MaxFileSize = 1_048_576;
+    private readonly CancellationTokenSource cancellationTokenSource = new();
     private string resourceJson = "{\n  \"Hello\": \"Hello world\"\n}";
     private string culture = "pt-BR";
     private string? translatedJson;
     private string? errorMessage;
     private bool isTranslating;
 
-    private async Task LoadResourceAsync(InputFileChangeEventArgs args)
+    private async Task LoadResourceAsync(IBrowserFile file)
     {
         errorMessage = null;
         translatedJson = null;
 
-        IBrowserFile file = args.File;
         if (!string.Equals(Path.GetExtension(file.Name), ".json", StringComparison.OrdinalIgnoreCase))
         {
             errorMessage = "Only JSON resource files are supported.";
@@ -67,13 +99,17 @@
 
         try
         {
-            await using Stream stream = file.OpenReadStream(MaxFileSize);
+            await using Stream stream = file.OpenReadStream(MaxFileSize, cancellationTokenSource.Token);
             using StreamReader reader = new(stream);
-            resourceJson = await reader.ReadToEndAsync();
+            resourceJson = await reader.ReadToEndAsync(cancellationTokenSource.Token);
         }
         catch (IOException exception)
         {
             errorMessage = $"The resource file could not be read: {exception.Message}";
+        }
+        catch (OperationCanceledException) when (cancellationTokenSource.IsCancellationRequested)
+        {
+            // The component is being disposed, so no user-facing error is required.
         }
     }
 
@@ -94,40 +130,39 @@
                 return;
             }
 
-            HttpResponseMessage response = await Http.PostAsJsonAsync(
-                "/localization/translate",
-                new TranslateResourceRequest(resources, culture));
+            Response<TranslateResourceResponse> result = await Mediator.Send(
+                new TranslateResourceCommand(resources, culture),
+                cancellationTokenSource.Token);
 
-            if (!response.IsSuccessStatusCode)
+            if (!result.Succeeded || result.Data is null)
             {
-                errorMessage = $"Translation failed with HTTP status {(int)response.StatusCode}.";
-                return;
-            }
-
-            TranslateResourceResponse? result =
-                await response.Content.ReadFromJsonAsync<TranslateResourceResponse>();
-
-            if (result is null)
-            {
-                errorMessage = "The translation service returned an empty response.";
+                errorMessage = result.Errors.Count > 0
+                    ? string.Join(" ", result.Errors)
+                    : "Translation failed.";
                 return;
             }
 
             translatedJson = System.Text.Json.JsonSerializer.Serialize(
-                result.Resources,
+                result.Data.Resources,
                 new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
         }
         catch (System.Text.Json.JsonException)
         {
             errorMessage = "The resource is not valid JSON or does not contain string values.";
         }
-        catch (HttpRequestException exception)
+        catch (OperationCanceledException) when (cancellationTokenSource.IsCancellationRequested)
         {
-            errorMessage = $"The translation request failed: {exception.Message}";
+            // The component is being disposed, so no user-facing error is required.
         }
         finally
         {
             isTranslating = false;
         }
+    }
+
+    public void Dispose()
+    {
+        cancellationTokenSource.Cancel();
+        cancellationTokenSource.Dispose();
     }
 }

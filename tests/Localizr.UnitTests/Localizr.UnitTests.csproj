@@ -1,53 +1,36 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
-    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
-    <CollectCoverage>true</CollectCoverage>
-    <CoverletOutputFormat>cobertura</CoverletOutputFormat>
-    <CoverletOutput>
-      $(MSBuildProjectDirectory)/TestResults/
-    </CoverletOutput>
-    <Include>
-      [Localizr]Localizr.Controllers.*;
-      [Localizr.Application]Localizr.Application.*;
-      [Localizr.Domain]Localizr.Domain.*;
-      [Localizr.Infrastructure]Localizr.Infrastructure.*
-    </Include>
-    <Exclude>
-      [Localizr]Microsoft.AspNetCore.OpenApi.Generated*,
-      [Localizr]Microsoft.AspNetCore.Components.*.g__*,
-      [Localizr]Microsoft.Extensions.*.g__*,
-      [Localizr]System.*
-      [Localizr.Composition]Mediator.*
-      [Mediator.SourceGenerator]Mediator.*
-    </Exclude>
-    <Threshold>80</Threshold>
-    <ThresholdType>line,branch</ThresholdType>
-    <ThresholdStat>Total</ThresholdStat>
+    <OutputType>Exe</OutputType>
+    <TestingPlatformShowTestsFailure>true</TestingPlatformShowTestsFailure>
+    <TestingPlatformCommandLineArguments>--report-trx --report-trx-filename test-results.trx --coverlet --coverlet-output-format cobertura</TestingPlatformCommandLineArguments>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="coverlet.collector" Version="10.0.1">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    <PackageReference Include="coverlet.MTP" Version="8.0.1">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="FluentAssertions" Version="8.10.0" />
     <PackageReference Include="FluentValidation" Version="12.1.1" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
-    <PackageReference Include="NSubstitute" Version="6.2.0" />
-    <PackageReference Include="xunit.v3" Version="4.0.0" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" Version="2.3.3">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="NSubstitute" Version="6.2.0" />
+    <PackageReference Include="xunit.v3" Version="4.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="testconfig.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <ItemGroup>
