@@ -65,7 +65,7 @@ jobs:
         if: always()
         shell: pwsh
         run: |
-          $coverageFiles = @(Get-ChildItem -Path "$env:GITHUB_WORKSPACE/artifacts/test-results" -Filter 'coverage.cobertura*.xml' -Recurse -File -ErrorAction SilentlyContinue)
+          $coverageFiles = @(Get-ChildItem -Path "$env:GITHUB_WORKSPACE/artifacts/test-results" -Filter 'coverage.cobertura.xml' -Recurse -File -ErrorAction SilentlyContinue)
           if ($coverageFiles.Count -gt 0) {
             dotnet tool run reportgenerator -reports:"./artifacts/test-results/coverage.cobertura.xml" -targetdir:"./artifacts/test-results" "-reporttypes:Markdown;cobertura" "-assemblyfilters:+Localizr*;-FluentValidation*;-Mediator*" "-classfilters:+*;-AspNetCoreGeneratedDocument*;-*Components*;-*.Components.*;-*.Pages.*;-*.Layout.*;-*.Shared.*;-*.Migrations.*" "-filefilters:-**/*.razor;-**/*.razor.cs;-**/obj/**/*.cs;-**/*.g.cs;-**/*LoggerMessageGenerator*/*"
           } else {
@@ -76,7 +76,7 @@ jobs:
         if: always()
         shell: pwsh
         run: |
-          $coverageFiles = @(Get-ChildItem -Path "$env:GITHUB_WORKSPACE/artifacts/test-results" -Filter 'coverage.cobertura*.xml' -Recurse -File -ErrorAction SilentlyContinue)
+          $coverageFiles = @(Get-ChildItem -Path "$env:GITHUB_WORKSPACE/artifacts/test-results" -Filter 'coverage.cobertura.xml' -Recurse -File -ErrorAction SilentlyContinue)
 
           if ($coverageFiles.Count -eq 0) {
             "## Coverage gate`n`nNo Coverlet XML was found under the test-results directory." | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
