@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Localizr.Application.Localization.Responses;
 using Localizr.Infrastructure.Localization.Options;
 using Localizr.Infrastructure.Localization.Services;
 using Microsoft.Extensions.Configuration;
@@ -52,7 +53,7 @@ public sealed class LocalizationSettingsServiceTests
         Assert.True(result.Configured);
         Assert.Equal("new-...1234", result.MaskedApiKey);
 
-        using JsonDocument document = JsonDocument.Parse(await File.ReadAllTextAsync(configuration.FilePath));
+        using JsonDocument document = JsonDocument.Parse(await File.ReadAllTextAsync(configuration.FilePath, TestContext.Current.CancellationToken));
         Assert.Equal("new-api-key-1234", document.RootElement
             .GetProperty(GoogleTranslateOptions.SectionName)
             .GetProperty("ApiKey")
@@ -106,9 +107,9 @@ public sealed class LocalizationSettingsServiceTests
         tracker.RecordUsage(1250);
         LocalizationSettingsService service = CreateService(configuration, tracker);
 
-        var result = await service.GetProviderUsageAsync("Google Cloud Translation", TestContext.Current.CancellationToken);
+        LocalizationProviderUsageResponse result = await service.GetProviderUsageAsync("Google Cloud Translation", TestContext.Current.CancellationToken);
 
-        Assert.True(result.Supported);
+        Assert.True(result.Available);
         Assert.Equal(1250, result.UsedCharacters);
         Assert.Equal(498750, result.RemainingCharacters);
         Assert.NotNull(result.Message);
@@ -123,7 +124,7 @@ public sealed class LocalizationSettingsServiceTests
 
         var result = await service.GetProviderUsageAsync("unsupported", TestContext.Current.CancellationToken);
 
-        Assert.False(result.Supported);
+        Assert.False(result.Available);
         Assert.Null(result.UsedCharacters);
         Assert.Null(result.RemainingCharacters);
         Assert.NotNull(result.Message);
@@ -160,7 +161,7 @@ public sealed class LocalizationSettingsServiceTests
         string root = Path.Combine(Path.GetTempPath(), "SharpLocalizrTests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         string filePath = Path.Combine(root, "appsettings.json");
-        File.WriteAllText(filePath, $$"""{"GoogleTranslate":{"ApiKey":"{{apiKey}}","Endpoint":"https://translation.googleapis.com/"}}""");
+        File.WriteAllText(filePath, $$"""{"GoogleTranslate":{"ApiKey":"{{apiKey}}","Endpoint":"https://translation.googleapis.com/" } } """);
 
         IConfigurationRoot configuration = new ConfigurationBuilder()
             .SetBasePath(root)
@@ -183,7 +184,6 @@ public sealed class LocalizationSettingsServiceTests
 
         public void Dispose()
         {
-            Configuration.Dispose();
             Directory.Delete(RootPath, recursive: true);
         }
     }
