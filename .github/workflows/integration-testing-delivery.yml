@@ -66,7 +66,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path artifacts/coverage | Out-Null
-          $coverageFiles = @(Get-ChildItem -Path artifacts/test-results -Filter 'coverage.cobertura*.xml' -Recurse -File -ErrorAction SilentlyContinue)
+          $coverageFiles = @(Get-ChildItem -Path "$env:GITHUB_WORKSPACE/artifacts/test-results" -Filter 'coverage.cobertura*.xml' -Recurse -File -ErrorAction SilentlyContinue)
           if ($coverageFiles.Count -gt 0) {
             dotnet tool run reportgenerator -- -reports:"artifacts/test-results/**/coverage.cobertura*.xml" -targetdir:"artifacts/coverage" -reporttypes:"MarkdownSummary;Cobertura"
           } else {
@@ -101,8 +101,12 @@ jobs:
           "LINE_COVERAGE=$([math]::Round($lineRate, 2))" | Out-File artifacts/line-rate.txt -Encoding utf8
           "BRANCH_COVERAGE=$([math]::Round($branchRate, 2))" | Out-File artifacts/branch-rate.txt -Encoding utf8
 
-          if ($lineRate -lt 80 -or $branchRate -lt 80) {
-            Write-Error "Coverage gate failed. Line coverage: $([math]::Round($lineRate, 2))%; Branch coverage: $([math]::Round($branchRate, 2))%; minimum: 80%."
+          if ($lineRate -lt 80)
+          {
+            Write-Error "Branch Coverage gate failed. `nLine coverage: $([math]::Round($lineRate, 2))%; minimum: 80%."
+          }
+          if($branchRate -lt 80) {
+            Write-Error "Branch Coverage gate failed. `nBranch coverage: $([math]::Round($branchRate, 2))%; minimum: 80%."
           }
 
       - name: Append test execution report
