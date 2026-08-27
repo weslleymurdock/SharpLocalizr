@@ -68,7 +68,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path artifacts/coverage | Out-Null
           $coverageFiles = @(Get-ChildItem -Path "$env:GITHUB_WORKSPACE/artifacts/test-results" -Filter 'coverage.cobertura*.xml' -Recurse -File -ErrorAction SilentlyContinue)
           if ($coverageFiles.Count -gt 0) {
-            dotnet tool run reportgenerator -- -reports:"artifacts/test-results/**/coverage.cobertura*.xml" -targetdir:"artifacts/coverage" -reporttypes:"MarkdownSummary;Cobertura"
+            dotnet tool run reportgenerator -- "-reports:./artifacts/test-results/coverage.cobertura.xml" "-targetdir:./artifacts/coverage" "-reporttypes:MarkdownSummary;Cobertura"
           } else {
             "# Coverage report unavailable`n`nCoverlet did not produce a coverage XML file." | Out-File artifacts/coverage/Summary.md -Encoding utf8
           }
