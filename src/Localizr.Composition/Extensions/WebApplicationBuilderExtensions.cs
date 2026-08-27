@@ -23,6 +23,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
@@ -78,14 +79,19 @@ public static class WebApplicationBuilderExtensions
             builder.Services.AddScoped<IIdentityEmailSender, LoggingIdentityEmailSender>();
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
             builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
-            builder.Services.AddScoped<ITranslatorService, TranslatorService>();
-            builder.Services.AddHttpClient<TranslatorService>((serviceProvider, client) =>
+            builder.Services.AddHttpClient<ITranslatorService, TranslatorService>((serviceProvider, client) =>
             {
                 GoogleTranslateOptions options = serviceProvider
-                    .GetRequiredService<Microsoft.Extensions.Options.IOptions<GoogleTranslateOptions>>()
+                    .GetRequiredService<IOptions<GoogleTranslateOptions>>()
                     .Value;
 
-                client.BaseAddress = new Uri(options.Endpoint, UriKind.Absolute);
+                if (!Uri.TryCreate(options.Endpoint, UriKind.Absolute, out Uri? endpoint))
+                {
+                    throw new InvalidOperationException(
+                        "Google translation endpoint must be a valid absolute URI.");
+                }
+
+                client.BaseAddress = endpoint;
             });
             builder.Services.AddValidatorsFromAssemblyContaining<RegisterCommandValidator>();
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
