@@ -111,7 +111,7 @@ jobs:
       - name: Append test execution report
         if: always()
         shell: pwsh
-        run: if (Test-Path artifacts/coverage/Summary.md) { Get-Content artifacts/coverage/Summary.md | Add-Content $env:GITHUB_STEP_SUMMARY } else { Add-Content $env:GITHUB_STEP_SUMMARY 'Coverage report was not generated.' }
+        run: if (Test-Path artifacts/test-results/Summary.md) { Get-Content artifacts/test-results/Summary.md | Add-Content $env:GITHUB_STEP_SUMMARY } else { Add-Content $env:GITHUB_STEP_SUMMARY 'Coverage report was not generated.' }
 
       - name: Upload test and coverage reports
         if: always()
