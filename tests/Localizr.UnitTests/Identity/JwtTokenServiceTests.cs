@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using Localizr.Application.Common.Contracts;
 using Localizr.Infrastructure.Identity.Options;
 using Localizr.Infrastructure.Identity.Services;
 using Microsoft.Extensions.Options;
