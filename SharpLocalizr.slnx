@@ -6,4 +6,8 @@
     <Project Path="src/Localizr.Infrastructure/Localizr.Infrastructure.csproj" />
     <Project Path="src/Localizr/Localizr.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Localizr.UnitTests/Localizr.UnitTests.csproj" />
+    <Project Path="tests/Localizr.UITests/Localizr.UITests.csproj" />
+  </Folder>
 </Solution>
