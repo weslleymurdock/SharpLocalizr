@@ -43,6 +43,7 @@ public static class WebApplicationBuilderExtensions
             where TProgram : class
             where TApp : IComponent
         {
+            builder.Configuration.AddEnvironmentVariables();
             builder.Services.AddRazorComponents()
                 .AddInteractiveServerComponents();
             builder.Services.AddControllers();
@@ -53,7 +54,7 @@ public static class WebApplicationBuilderExtensions
             builder.Services.Configure<GoogleTranslateOptions>(builder.Configuration.GetSection(GoogleTranslateOptions.SectionName));
 
             builder.Services.AddDbContext<LocalizrDbContext>(options => options.UseSqlServer(
-                builder.Configuration.GetConnectionString("Localizr"),
+                builder.Configuration.GetConnectionString("SQLServer"),
                 sql => sql.CommandTimeout(90)));
 
             builder.Services.AddIdentityCore<User>(options =>
@@ -67,11 +68,10 @@ public static class WebApplicationBuilderExtensions
                     options.Password.RequireNonAlphanumeric = true;
                     options.Lockout.MaxFailedAccessAttempts = 5;
                     options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
-                })
-                .AddRoles<Role>()
-                .AddEntityFrameworkStores<LocalizrDbContext>()
-                .AddSignInManager()
-                .AddDefaultTokenProviders();
+                }).AddRoles<Role>()
+                    .AddEntityFrameworkStores<LocalizrDbContext>()
+                    .AddSignInManager()
+                    .AddDefaultTokenProviders();
 
             builder.Services.AddScoped<IIdentityService, IdentityService>();
             builder.Services.AddSingleton<IRevokedTokenStore, RevokedTokenStore>();

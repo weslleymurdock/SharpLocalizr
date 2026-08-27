@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector
+        friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <Include>
+            [Localizr]Localizr.Controllers.*,
+            [Localizr.Application]Localizr.Application.*,
+            [Localizr.Domain]Localizr.Domain.*,
+            [Localizr.Infrastructure]Localizr.Infrastructure.*
+          </Include>
+          <Exclude>
+            [Localizr]Microsoft.AspNetCore.OpenApi.Generated*,
+            [Localizr]Microsoft.AspNetCore.Components.*.g__*,
+            [Localizr]Microsoft.Extensions.*.g__*,
+            [Localizr]System.*
+            [Mediator.SourceGenerator]Mediator.*
+          </Exclude>
+          <ExcludeByAttribute>
+            GeneratedCodeAttribute,
+            ExcludeFromCodeCoverageAttribute
+          </ExcludeByAttribute>
+          <ExcludeByFile>
+            **/*.g.cs,
+            **/*.g.i.cs,
+            **/obj/**/*.cs
+          </ExcludeByFile>
+          <ExcludeAssembliesWithoutSources>MissingAll</ExcludeAssembliesWithoutSources>
+          <IncludeTestAssembly>false</IncludeTestAssembly>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

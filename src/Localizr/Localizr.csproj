@@ -24,4 +24,15 @@
     <PackageReference Include="Scalar.AspNetCore" Version="2.16.20" />
   </ItemGroup>
 
+  <Target Name="AddMigration">
+   <PropertyGroup>
+     <MigrationOutput Condition="'$(MigrationOutput)' == ''">Persistence/Migrations</MigrationOutput>
+     <IsVerbose Condition="'$(IsVerbose)' != ''">-v</IsVerbose>
+   </PropertyGroup>
+   <Error Condition="'$(Name)' == ''" Text="The 'Name' param is mandatory; Usage example: dotnet build -t:AddMigrationUI -p:Name=MyMigration" />
+   <Message Text="Running: dotnet ef migrations add $(Name) --framework net10.0-windows10.0.19041.0 --output-dir $(MigrationOutput)" Importance="High" />
+   <Exec Command="dotnet ef migrations add $(Name) --project .\..\Localizr.Infrastructure\ --startup-project . --output-dir $(MigrationOutput) $(IsVerbose)" ContinueOnError="false" />
+   <Message Text="Migration process completed!" Importance="High" />
+  </Target>
+
 </Project>
