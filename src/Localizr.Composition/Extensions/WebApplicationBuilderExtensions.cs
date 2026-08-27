@@ -38,6 +38,7 @@ public static class WebApplicationBuilderExtensions
         /// <summary>Runs the Localizr web application.</summary>
         /// <typeparam name="TProgram">The program type.</typeparam>
         /// <typeparam name="TApp">The root component.</typeparam>
+        /// <param name="configureMudBlazor">An optional callback used to configure MudBlazor services.</param>
         /// <returns>A task for application startup.</returns>
         public async Task RunLocalizrAsync<TProgram, TApp>(Action<WebApplicationBuilder> configureMudBlazor)
             where TProgram : class
@@ -79,6 +80,8 @@ public static class WebApplicationBuilderExtensions
             builder.Services.AddScoped<IIdentityEmailSender, LoggingIdentityEmailSender>();
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
             builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+            builder.Services.AddSingleton<GoogleTranslateUsageTracker>();
+            builder.Services.AddScoped<ILocalizationSettingsService, LocalizationSettingsService>();
             builder.Services.AddHttpClient<ITranslatorService, TranslatorService>((serviceProvider, client) =>
             {
                 GoogleTranslateOptions options = serviceProvider
