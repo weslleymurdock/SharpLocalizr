@@ -1,12 +1,11 @@
 name: Build
 
-on: 
+on:
   push:
     tags: ["v*"]
-  pull_request: 
+  pull_request:
     types: ["opened", "synchronize", "reopened"]
-  workflow_dispatch: 
-
+  workflow_dispatch:
 
 jobs:
   build:
@@ -16,15 +15,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Setup .NET 
+      - name: Setup .NET
         uses: actions/setup-dotnet@v6
         with:
           global-json-file: ${{ github.workspace }}/global.json
 
-      - name: Build 
+      - name: Build
         working-directory: ${{ github.workspace }}/src/Localizr
         run: dotnet build
-  
+
   test:
     runs-on: ubuntu-latest
     name: Continuous Testing
@@ -32,13 +31,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Setup .NET 
+      - name: Setup .NET
         uses: actions/setup-dotnet@v6
         with:
           global-json-file: ${{ github.workspace }}/global.json
-          
+
       - name: Setup Report Generator
-        run: dotnet tool restore  --tool-manifest ${{ github.workspace }}/dotnet-tools.json
+        run: dotnet tool restore --tool-manifest ${{ github.workspace }}/dotnet-tools.json
 
       - name: Run Tests
         id: test
@@ -53,7 +52,7 @@ jobs:
           $exitCode = $LASTEXITCODE
           "dotnet test exit code: $exitCode" | Add-Content -Path $outputFile
           "TEST_EXIT_CODE=$exitCode" | Out-File -FilePath artifacts/test-exit-code.txt -Encoding utf8
-      
+
       - name: Publish Test Summary
         uses: dorny/test-reporter@v1
         if: always()
@@ -69,7 +68,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path artifacts/coverage | Out-Null
           $coverageFiles = @(Get-ChildItem -Path artifacts/test-results -Filter 'coverage.cobertura*.xml' -Recurse -File -ErrorAction SilentlyContinue)
           if ($coverageFiles.Count -gt 0) {
-            reportgenerator -reports:"artifacts/test-results/**/coverage.cobertura*.xml" -targetdir:"artifacts/coverage" -reporttypes:"MarkdownSummary;Cobertura"
+            dotnet tool run reportgenerator -- -reports:"artifacts/test-results/**/coverage.cobertura*.xml" -targetdir:"artifacts/coverage" -reporttypes:"MarkdownSummary;Cobertura"
           } else {
             "# Coverage report unavailable`n`nCoverlet did not produce a coverage XML file." | Out-File artifacts/coverage/Summary.md -Encoding utf8
           }

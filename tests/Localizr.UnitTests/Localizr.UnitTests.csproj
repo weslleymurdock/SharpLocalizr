@@ -6,7 +6,6 @@
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <OutputType>Exe</OutputType>
-    <TestingPlatformShowTestsFailure>true</TestingPlatformShowTestsFailure>
     <TestingPlatformCommandLineArguments>--report-trx --report-trx-filename test-results.trx --coverlet --coverlet-output-format cobertura</TestingPlatformCommandLineArguments>
   </PropertyGroup>
 
@@ -14,7 +13,6 @@
     <PackageReference Include="coverlet.MTP" Version="8.0.1">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="FluentAssertions" Version="8.10.0" />
     <PackageReference Include="FluentValidation" Version="12.1.1" />
     <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" Version="2.3.3">
       <PrivateAssets>all</PrivateAssets>

@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Localizr.Application.Common.Responses;
 using Localizr.Application.Identity.Abstractions;
 using Localizr.Application.Identity.Commands;
@@ -14,7 +13,7 @@ public sealed class IdentityHandlersTests
 {
     private readonly IIdentityService identityService = Substitute.For<IIdentityService>();
     private readonly IdentityHandlers handler;
-    private readonly CancellationToken cancellationToken = new CancellationTokenSource().Token;
+    private readonly CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
     /// <summary>Initializes the handler under test with a mocked identity service.</summary>
     public IdentityHandlersTests()
@@ -31,7 +30,7 @@ public sealed class IdentityHandlersTests
 
         IdentityResultResponse result = await handler.Handle(new RegisterCommand("user@example.com", "Password1!"), cancellationToken);
 
-        result.Should().Be(expected);
+        Assert.Same(expected, result);
         await identityService.Received(1).RegisterAsync("user@example.com", "Password1!", cancellationToken);
     }
 
@@ -44,8 +43,8 @@ public sealed class IdentityHandlersTests
 
         Response<TokenResponse> result = await handler.Handle(new LoginCommand("user@example.com", "Password1!", "123456"), cancellationToken);
 
-        result.Succeeded.Should().BeTrue();
-        result.Data.Should().Be(tokens);
+        Assert.True(result.Succeeded);
+        Assert.Same(tokens, result.Data);
         await identityService.Received(1).LoginAsync("user@example.com", "Password1!", "123456", null, cancellationToken);
     }
 
@@ -58,9 +57,10 @@ public sealed class IdentityHandlersTests
 
         Response<TokenResponse> result = await handler.Handle(new LoginCommand("user@example.com", "wrong", null, "recovery"), cancellationToken);
 
-        result.Succeeded.Should().BeFalse();
-        result.Data.Should().BeNull();
-        result.Errors.Should().ContainSingle().Which.Should().Be("Invalid credentials.");
+        Assert.False(result.Succeeded);
+        Assert.Null(result.Data);
+        Assert.Single(result.Errors);
+        Assert.Equal("Invalid credentials.", result.Errors[0]);
     }
 
     /// <summary>Verifies successful refresh returns the replacement token pair.</summary>
@@ -72,8 +72,8 @@ public sealed class IdentityHandlersTests
 
         Response<TokenResponse> result = await handler.Handle(new RefreshTokenCommand("refresh-token"), cancellationToken);
 
-        result.Succeeded.Should().BeTrue();
-        result.Data.Should().Be(tokens);
+        Assert.True(result.Succeeded);
+        Assert.Same(tokens, result.Data);
     }
 
     /// <summary>Verifies an invalid refresh token becomes a failure response.</summary>
@@ -84,8 +84,9 @@ public sealed class IdentityHandlersTests
 
         Response<TokenResponse> result = await handler.Handle(new RefreshTokenCommand("invalid"), cancellationToken);
 
-        result.Succeeded.Should().BeFalse();
-        result.Errors.Should().ContainSingle().Which.Should().Be("Invalid refresh token.");
+        Assert.False(result.Succeeded);
+        Assert.Single(result.Errors);
+        Assert.Equal("Invalid refresh token.", result.Errors[0]);
     }
 
     /// <summary>Verifies token revocation delegates to the identity service.</summary>
@@ -96,8 +97,8 @@ public sealed class IdentityHandlersTests
 
         Response<bool> result = await handler.Handle(new RevokeTokenCommand("access-token"), cancellationToken);
 
-        result.Succeeded.Should().BeTrue();
-        result.Data.Should().BeTrue();
+        Assert.True(result.Succeeded);
+        Assert.True(result.Data);
         await identityService.Received(1).RevokeAsync("access-token", cancellationToken);
     }
 
@@ -109,7 +110,7 @@ public sealed class IdentityHandlersTests
 
         Response<bool> result = await handler.Handle(new ConfirmEmailCommand("user-id", "code", "new@example.com"), cancellationToken);
 
-        result.Data.Should().BeTrue();
+        Assert.True(result.Data);
         await identityService.Received(1).ConfirmEmailAsync("user-id", "code", "new@example.com", cancellationToken);
     }
 
@@ -122,7 +123,7 @@ public sealed class IdentityHandlersTests
 
         IdentityResultResponse result = await handler.Handle(new ResendConfirmationEmailCommand("user@example.com"), cancellationToken);
 
-        result.Should().Be(expected);
+        Assert.Same(expected, result);
     }
 
     /// <summary>Verifies password recovery delegates the email and cancellation token.</summary>
@@ -134,7 +135,7 @@ public sealed class IdentityHandlersTests
 
         IdentityResultResponse result = await handler.Handle(new ForgotPasswordCommand("user@example.com"), cancellationToken);
 
-        result.Should().Be(expected);
+        Assert.Same(expected, result);
     }
 
     /// <summary>Verifies password reset delegates all command data.</summary>
@@ -146,7 +147,7 @@ public sealed class IdentityHandlersTests
 
         IdentityResultResponse result = await handler.Handle(new ResetPasswordCommand("user@example.com", "reset-code", "Password2!"), cancellationToken);
 
-        result.Should().Be(expected);
+        Assert.Same(expected, result);
     }
 
     /// <summary>Verifies a missing identity is converted to a not-found application response.</summary>
@@ -157,9 +158,10 @@ public sealed class IdentityHandlersTests
 
         Response<IdentityInfoResponse> result = await handler.Handle(new GetIdentityInfoQuery("user-id"), cancellationToken);
 
-        result.Succeeded.Should().BeFalse();
-        result.Data.Should().BeNull();
-        result.Errors.Should().ContainSingle().Which.Should().Be("User not found.");
+        Assert.False(result.Succeeded);
+        Assert.Null(result.Data);
+        Assert.Single(result.Errors);
+        Assert.Equal("User not found.", result.Errors[0]);
     }
 
     /// <summary>Verifies an existing identity is returned unchanged.</summary>
@@ -171,8 +173,8 @@ public sealed class IdentityHandlersTests
 
         Response<IdentityInfoResponse> result = await handler.Handle(new GetIdentityInfoQuery("user-id"), cancellationToken);
 
-        result.Succeeded.Should().BeTrue();
-        result.Data.Should().Be(expected);
+        Assert.True(result.Succeeded);
+        Assert.Same(expected, result.Data);
     }
 
     /// <summary>Verifies identity information updates delegate all command values.</summary>
@@ -186,7 +188,7 @@ public sealed class IdentityHandlersTests
             new UpdateIdentityInfoCommand("user-id", "new@example.com", "Password2!", "Password1!"),
             cancellationToken);
 
-        result.Should().Be(expected);
+        Assert.Same(expected, result);
     }
 
     /// <summary>Verifies invalid two-factor configuration is converted to a failure response.</summary>
@@ -200,9 +202,10 @@ public sealed class IdentityHandlersTests
             new ConfigureTwoFactorCommand("user-id", true, "123456", true, false, false),
             cancellationToken);
 
-        result.Succeeded.Should().BeFalse();
-        result.Data.Should().BeNull();
-        result.Errors.Should().ContainSingle().Which.Should().Be("Invalid 2FA configuration.");
+        Assert.False(result.Succeeded);
+        Assert.Null(result.Data);
+        Assert.Single(result.Errors);
+        Assert.Equal("Invalid 2FA configuration.", result.Errors[0]);
     }
 
     /// <summary>Verifies successful two-factor configuration returns the service response.</summary>
@@ -216,7 +219,7 @@ public sealed class IdentityHandlersTests
             new ConfigureTwoFactorCommand("user-id", true, "123456", false, false, false),
             cancellationToken);
 
-        result.Succeeded.Should().BeTrue();
-        result.Data.Should().Be(expected);
+        Assert.True(result.Succeeded);
+        Assert.Same(expected, result.Data);
     }
 }

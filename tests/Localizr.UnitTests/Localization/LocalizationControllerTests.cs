@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Localizr.Application.Common.Responses;
 using Localizr.Application.Localization.Commands;
 using Localizr.Application.Localization.Requests;
@@ -28,10 +27,10 @@ public sealed class LocalizationControllerTests
             new TranslateResourceRequest(
                 new Dictionary<string, string> { ["Hello"] = "Hello" },
                 "pt-BR"),
-            CancellationToken.None);
+            TestContext.Current.CancellationToken);
 
-        OkObjectResult ok = result.Should().BeOfType<OkObjectResult>().Subject;
-        ok.Value.Should().Be(response);
+        OkObjectResult ok = Assert.IsType<OkObjectResult>(result);
+        Assert.Same(response, ok.Value);
     }
 
     /// <summary>Verifies that the controller propagates the cancellation token to Mediator.</summary>
@@ -45,8 +44,7 @@ public sealed class LocalizationControllerTests
         mediator.Send(Arg.Any<TranslateResourceCommand>(), Arg.Any<CancellationToken>())
             .Returns(Response.Success(response));
         LocalizationController controller = new(mediator);
-        using CancellationTokenSource cancellation = new();
-        CancellationToken token = cancellation.Token;
+        CancellationToken token = TestContext.Current.CancellationToken;
 
         await controller.Translate(
             new TranslateResourceRequest(

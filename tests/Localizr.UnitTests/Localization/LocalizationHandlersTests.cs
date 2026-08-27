@@ -1,8 +1,6 @@
-using FluentAssertions;
 using Localizr.Application.Localization.Abstractions;
 using Localizr.Application.Localization.Commands;
 using Localizr.Application.Localization.Handlers;
-using Localizr.Application.Localization.Responses;
 using NSubstitute;
 
 namespace Localizr.UnitTests.Localization;
@@ -27,14 +25,16 @@ public sealed class LocalizationHandlersTests
             new Dictionary<string, string> { ["Hello"] = "Hello" },
             "pt-BR");
 
-        var result = await handler.Handle(command, CancellationToken.None);
+        var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
-        result.Succeeded.Should().BeTrue();
-        result.Data.Should().BeEquivalentTo(new TranslateResourceResponse(translated, "pt-BR"));
+        Assert.True(result.Succeeded);
+        Assert.NotNull(result.Data);
+        Assert.Equal("pt-BR", result.Data.Culture);
+        Assert.Equal(translated, result.Data.Resources);
         await translator.Received(1).TranslateToCultureAsync(
             command.Resources,
             command.Culture,
-            Arg.Any<CancellationToken>());
+            TestContext.Current.CancellationToken);
     }
 
     /// <summary>Verifies that the handler propagates the cancellation token to the service.</summary>
@@ -53,8 +53,7 @@ public sealed class LocalizationHandlersTests
         TranslateResourceCommand command = new(
             new Dictionary<string, string> { ["Hello"] = "Hello" },
             "pt-BR");
-        using CancellationTokenSource cancellation = new();
-        CancellationToken token = cancellation.Token;
+        CancellationToken token = TestContext.Current.CancellationToken;
 
         await handler.Handle(command, token);
 

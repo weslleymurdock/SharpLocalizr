@@ -15,8 +15,10 @@ public sealed class TranslateResourceCommandValidatorTests
     {
         TranslateResourceCommand command = new(new Dictionary<string, string>(), "pt-BR");
 
-        (await _validator.TestValidateAsync(command))
-            .ShouldHaveValidationErrorFor(x => x.Resources);
+        TestValidationResult<TranslateResourceCommand> result =
+            await _validator.TestValidateAsync(command, TestContext.Current.CancellationToken);
+
+        result.ShouldHaveValidationErrorFor(x => x.Resources);
     }
 
     /// <summary>Verifies that an empty culture is rejected.</summary>
@@ -25,18 +27,22 @@ public sealed class TranslateResourceCommandValidatorTests
     {
         TranslateResourceCommand command = new(new Dictionary<string, string> { ["Hello"] = "Hello" }, string.Empty);
 
-        (await _validator.TestValidateAsync(command))
-            .ShouldHaveValidationErrorFor(x => x.Culture);
+        TestValidationResult<TranslateResourceCommand> result =
+            await _validator.TestValidateAsync(command, TestContext.Current.CancellationToken);
+
+        result.ShouldHaveValidationErrorFor(x => x.Culture);
     }
 
     /// <summary>Verifies that an invalid culture is rejected.</summary>
     [Fact]
     public async Task ValidateAsync_WhenCultureIsInvalid_ShouldFail()
     {
-        TranslateResourceCommand command = new(new Dictionary<string, string> { ["Hello"] = "Hello" }, "not-a-culture");
+        TranslateResourceCommand command = new(new Dictionary<string, string> { ["Hello"] = "Hello" }, "invalid_culture_name");
 
-        (await _validator.TestValidateAsync(command))
-            .ShouldHaveValidationErrorFor(x => x.Culture);
+        TestValidationResult<TranslateResourceCommand> result =
+            await _validator.TestValidateAsync(command, TestContext.Current.CancellationToken);
+
+        result.ShouldHaveValidationErrorFor(x => x.Culture);
     }
 
     /// <summary>Verifies that a valid translation command is accepted.</summary>
@@ -45,6 +51,9 @@ public sealed class TranslateResourceCommandValidatorTests
     {
         TranslateResourceCommand command = new(new Dictionary<string, string> { ["Hello"] = "Hello" }, "pt-BR");
 
-        (await _validator.TestValidateAsync(command)).ShouldNotHaveAnyValidationErrors();
+        TestValidationResult<TranslateResourceCommand> result =
+            await _validator.TestValidateAsync(command, TestContext.Current.CancellationToken);
+
+        result.ShouldNotHaveAnyValidationErrors();
     }
 }
