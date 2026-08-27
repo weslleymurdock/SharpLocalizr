@@ -1,8 +1,10 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Text;
 using Localizr.Application.Common.Contracts;
 using Localizr.Infrastructure.Identity.Options;
 using Localizr.Infrastructure.Identity.Services;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.Extensions.Options;
 
 namespace Localizr.UnitTests.Identity;
@@ -25,12 +27,10 @@ public sealed class JwtTokenServiceTests
     {
         JwtTokenService service = CreateService(new RevokedTokenStore());
         var response = service.CreateTokens("user-1", "user@example.com", ["Admin", "User"], [new Claim("custom", "value")]);
-
         Assert.Equal("Bearer", response.TokenType);
         Assert.True(response.ExpiresIn > 0);
         Assert.NotEmpty(response.AccessToken);
         Assert.NotEmpty(response.RefreshToken);
-
         JwtSecurityToken access = new JwtSecurityTokenHandler().ReadJwtToken(response.AccessToken);
         JwtSecurityToken refresh = new JwtSecurityTokenHandler().ReadJwtToken(response.RefreshToken);
         Assert.Equal(JwtTokenTypes.Access, access.Claims.Single(x => x.Type == "token_type").Value);
@@ -46,7 +46,6 @@ public sealed class JwtTokenServiceTests
         JwtTokenService service = CreateService(new RevokedTokenStore());
         var tokens = service.CreateTokens("user-1", "user@example.com", [], []);
         ClaimsPrincipal? principal = service.ValidateToken(tokens.AccessToken);
-
         Assert.NotNull(principal);
         Assert.Equal("user-1", principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? principal.FindFirstValue(JwtRegisteredClaimNames.Sub));
     }
@@ -66,8 +65,7 @@ public sealed class JwtTokenServiceTests
         JwtTokenService source = CreateService(new RevokedTokenStore());
         var tokens = source.CreateTokens("user-1", "user@example.com", [], []);
         JwtOptions otherOptions = new() { Key = "abcdefghijklmnopqrstuvwxyz012345", Issuer = JwtSettings.Issuer, Audience = JwtSettings.Audience };
-        JwtTokenService service = new(Microsoft.Extensions.Options.Options.Create(otherOptions), new RevokedTokenStore());
-
+        JwtTokenService service = new(Options.Create(otherOptions), new RevokedTokenStore());
         Assert.Null(service.ValidateToken(tokens.AccessToken));
     }
 
@@ -78,8 +76,7 @@ public sealed class JwtTokenServiceTests
         JwtTokenService source = CreateService(new RevokedTokenStore());
         var tokens = source.CreateTokens("user-1", "user@example.com", [], []);
         JwtOptions otherOptions = new() { Key = JwtSettings.Key, Issuer = "OtherIssuer", Audience = JwtSettings.Audience };
-        JwtTokenService service = new(Microsoft.Extensions.Options.Options.Create(otherOptions), new RevokedTokenStore());
-
+        JwtTokenService service = new(Options.Create(otherOptions), new RevokedTokenStore());
         Assert.Null(service.ValidateToken(tokens.AccessToken));
     }
 
@@ -90,8 +87,7 @@ public sealed class JwtTokenServiceTests
         JwtTokenService source = CreateService(new RevokedTokenStore());
         var tokens = source.CreateTokens("user-1", "user@example.com", [], []);
         JwtOptions otherOptions = new() { Key = JwtSettings.Key, Issuer = JwtSettings.Issuer, Audience = "OtherAudience" };
-        JwtTokenService service = new(Microsoft.Extensions.Options.Options.Create(otherOptions), new RevokedTokenStore());
-
+        JwtTokenService service = new(Options.Create(otherOptions), new RevokedTokenStore());
         Assert.Null(service.ValidateToken(tokens.AccessToken));
     }
 
@@ -99,22 +95,18 @@ public sealed class JwtTokenServiceTests
     [Fact]
     public void ValidateToken_WhenTokenIsExpired_ShouldRejectLifetime()
     {
-        JwtOptions options = new() { Key = JwtSettings.Key, Issuer = JwtSettings.Issuer, Audience = JwtSettings.Audience, AccessTokenLifetime = TimeSpan.FromSeconds(-1), RefreshTokenLifetime = TimeSpan.FromSeconds(-1) };
-        JwtTokenService service = new(Microsoft.Extensions.Options.Options.Create(options), new RevokedTokenStore());
-        var tokens = service.CreateTokens("user-1", "user@example.com", [], []);
-
-        Assert.Null(service.ValidateToken(tokens.AccessToken));
+        JwtTokenService service = CreateService(new RevokedTokenStore());
+        string token = CreateExpiredToken();
+        Assert.Null(service.ValidateToken(token));
     }
 
-    /// <summary>Verifies lifetime validation can be disabled for an otherwise validly signed token.</summary>
+    /// <summary>Verifies lifetime validation can be disabled for an expired token.</summary>
     [Fact]
     public void ValidateToken_WhenLifetimeValidationIsDisabled_ShouldReturnExpiredToken()
     {
-        JwtOptions options = new() { Key = JwtSettings.Key, Issuer = JwtSettings.Issuer, Audience = JwtSettings.Audience, AccessTokenLifetime = TimeSpan.FromSeconds(-1), RefreshTokenLifetime = TimeSpan.FromSeconds(-1) };
-        JwtTokenService service = new(Microsoft.Extensions.Options.Options.Create(options), new RevokedTokenStore());
-        var tokens = service.CreateTokens("user-1", "user@example.com", [], []);
-
-        Assert.NotNull(service.ValidateToken(tokens.AccessToken, validateLifetime: false));
+        JwtTokenService service = CreateService(new RevokedTokenStore());
+        string token = CreateExpiredToken();
+        Assert.NotNull(service.ValidateToken(token, validateLifetime: false));
     }
 
     /// <summary>Verifies a revoked token is rejected even when its signature is valid.</summary>
@@ -125,7 +117,6 @@ public sealed class JwtTokenServiceTests
         JwtTokenService service = CreateService(store);
         var tokens = service.CreateTokens("user-1", "user@example.com", [], []);
         store.Revoke(service.GetTokenId(tokens.AccessToken)!, DateTimeOffset.UtcNow.AddMinutes(5));
-
         Assert.Null(service.ValidateToken(tokens.AccessToken));
     }
 
@@ -149,7 +140,6 @@ public sealed class JwtTokenServiceTests
         JwtTokenService service = CreateService(new RevokedTokenStore());
         var tokens = service.CreateTokens("user-1", "user@example.com", [], []);
         DateTimeOffset? expiration = service.GetExpiration(tokens.AccessToken);
-
         Assert.True(expiration.HasValue);
         Assert.True(expiration > DateTimeOffset.UtcNow);
     }
@@ -163,14 +153,13 @@ public sealed class JwtTokenServiceTests
     public void CreateTokens_WhenKeyIsTooShort_ShouldThrow()
     {
         JwtOptions options = new() { Key = "short", Issuer = JwtSettings.Issuer, Audience = JwtSettings.Audience };
-        JwtTokenService service = new(Microsoft.Extensions.Options.Options.Create(options), new RevokedTokenStore());
-
+        JwtTokenService service = new(Options.Create(options), new RevokedTokenStore());
         Assert.Throws<InvalidOperationException>(() => service.CreateTokens("user", "user@example.com", [], []));
     }
 
     /// <summary>Verifies active revocations are reported and expired revocations are removed.</summary>
     [Fact]
-    public void RevokedTokenStore_ShouldHandleActiveAndExpiredEntries()
+    public async Task RevokedTokenStore_ShouldHandleActiveAndExpiredEntries()
     {
         RevokedTokenStore store = new();
         Assert.False(store.IsRevoked("missing"));
@@ -178,10 +167,28 @@ public sealed class JwtTokenServiceTests
         Assert.True(store.IsRevoked("active"));
         store.Revoke("expired", DateTimeOffset.UtcNow.AddSeconds(-1));
         Assert.False(store.IsRevoked("expired"));
-        store.Revoke("active", DateTimeOffset.UtcNow.AddSeconds(-1));
-        Assert.False(store.IsRevoked("active"));
+        store.Revoke("expiring", DateTimeOffset.UtcNow.AddMilliseconds(50));
+        Assert.True(store.IsRevoked("expiring"));
+        await Task.Delay(100, TestContext.Current.CancellationToken);
+        Assert.False(store.IsRevoked("expiring"));
+        Assert.True(store.IsRevoked("active"));
+    }
+
+    private static string CreateExpiredToken()
+    {
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        SymmetricSecurityKey key = new(Encoding.UTF8.GetBytes(JwtSettings.Key));
+        SigningCredentials credentials = new(key, SecurityAlgorithms.HmacSha256);
+        JwtSecurityToken token = new(
+            issuer: JwtSettings.Issuer,
+            audience: JwtSettings.Audience,
+            claims: [new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N"))],
+            notBefore: now.AddMinutes(-2).UtcDateTime,
+            expires: now.AddMinutes(-1).UtcDateTime,
+            signingCredentials: credentials);
+        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
     private static JwtTokenService CreateService(RevokedTokenStore store)
-        => new(Microsoft.Extensions.Options.Options.Create(JwtSettings), store);
+        => new(Options.Create(JwtSettings), store);
 }

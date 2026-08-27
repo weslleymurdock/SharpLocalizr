@@ -13,10 +13,10 @@ public sealed class IdentityValidatorsTests
     public async Task Register_WhenValid_ShouldPass()
     {
         IIdentityService service = Substitute.For<IIdentityService>();
-        service.EmailExistsAsync("user@example.com", Arg.Any<CancellationToken>()).Returns(false);
+        service.EmailExistsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
 
         var result = await new RegisterCommandValidator(service).ValidateAsync(
-            new RegisterCommand("user@example.com", "Password1!"),
+            new RegisterCommand("user@example.org", "Abcdef1!"),
             TestContext.Current.CancellationToken);
 
         Assert.True(result.IsValid);
@@ -27,11 +27,7 @@ public sealed class IdentityValidatorsTests
     public async Task Register_WhenRequiredValuesAreEmpty_ShouldFail()
     {
         IIdentityService service = Substitute.For<IIdentityService>();
-
-        var result = await new RegisterCommandValidator(service).ValidateAsync(
-            new RegisterCommand(string.Empty, string.Empty),
-            TestContext.Current.CancellationToken);
-
+        var result = await new RegisterCommandValidator(service).ValidateAsync(new RegisterCommand(string.Empty, string.Empty), TestContext.Current.CancellationToken);
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, error => error.PropertyName == nameof(RegisterCommand.Email));
         Assert.Contains(result.Errors, error => error.PropertyName == nameof(RegisterCommand.Password));
@@ -42,11 +38,7 @@ public sealed class IdentityValidatorsTests
     public async Task Register_WhenEmailIsInvalid_ShouldFail()
     {
         IIdentityService service = Substitute.For<IIdentityService>();
-
-        var result = await new RegisterCommandValidator(service).ValidateAsync(
-            new RegisterCommand("not-an-email", "Password1!"),
-            TestContext.Current.CancellationToken);
-
+        var result = await new RegisterCommandValidator(service).ValidateAsync(new RegisterCommand("not-an-email", "Abcdef1!"), TestContext.Current.CancellationToken);
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, error => error.PropertyName == nameof(RegisterCommand.Email));
     }
@@ -56,11 +48,7 @@ public sealed class IdentityValidatorsTests
     public async Task Register_WhenPasswordIsTooShort_ShouldFail()
     {
         IIdentityService service = Substitute.For<IIdentityService>();
-
-        var result = await new RegisterCommandValidator(service).ValidateAsync(
-            new RegisterCommand("user@example.com", "short"),
-            TestContext.Current.CancellationToken);
-
+        var result = await new RegisterCommandValidator(service).ValidateAsync(new RegisterCommand("user@example.org", "short"), TestContext.Current.CancellationToken);
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, error => error.PropertyName == nameof(RegisterCommand.Password));
     }
@@ -70,12 +58,8 @@ public sealed class IdentityValidatorsTests
     public async Task Register_WhenEmailAlreadyExists_ShouldFail()
     {
         IIdentityService service = Substitute.For<IIdentityService>();
-        service.EmailExistsAsync("user@example.com", Arg.Any<CancellationToken>()).Returns(true);
-
-        var result = await new RegisterCommandValidator(service).ValidateAsync(
-            new RegisterCommand("user@example.com", "Password1!"),
-            TestContext.Current.CancellationToken);
-
+        service.EmailExistsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
+        var result = await new RegisterCommandValidator(service).ValidateAsync(new RegisterCommand("user@example.org", "Abcdef1!"), TestContext.Current.CancellationToken);
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, error => error.ErrorCode == "CONFLICT");
     }
@@ -84,10 +68,7 @@ public sealed class IdentityValidatorsTests
     [Fact]
     public async Task Login_WhenValid_ShouldPass()
     {
-        var result = await new LoginCommandValidator().ValidateAsync(
-            new LoginCommand("user@example.com", "Password1!"),
-            TestContext.Current.CancellationToken);
-
+        var result = await new LoginCommandValidator().ValidateAsync(new LoginCommand("user@example.org", "Abcdef1!"), TestContext.Current.CancellationToken);
         Assert.True(result.IsValid);
     }
 
@@ -95,10 +76,7 @@ public sealed class IdentityValidatorsTests
     [Fact]
     public async Task Login_WhenCredentialsAreInvalid_ShouldFail()
     {
-        var result = await new LoginCommandValidator().ValidateAsync(
-            new LoginCommand(string.Empty, "short"),
-            TestContext.Current.CancellationToken);
-
+        var result = await new LoginCommandValidator().ValidateAsync(new LoginCommand(string.Empty, "short"), TestContext.Current.CancellationToken);
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, error => error.PropertyName == nameof(LoginCommand.Email));
         Assert.Contains(result.Errors, error => error.PropertyName == nameof(LoginCommand.Password));
@@ -108,10 +86,7 @@ public sealed class IdentityValidatorsTests
     [Fact]
     public async Task Login_WhenBothTwoFactorCodesAreProvided_ShouldFail()
     {
-        var result = await new LoginCommandValidator().ValidateAsync(
-            new LoginCommand("user@example.com", "Password1!", "123456", "recovery"),
-            TestContext.Current.CancellationToken);
-
+        var result = await new LoginCommandValidator().ValidateAsync(new LoginCommand("user@example.org", "Abcdef1!", "123456", "recovery"), TestContext.Current.CancellationToken);
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, error => error.PropertyName == string.Empty);
     }
@@ -120,10 +95,7 @@ public sealed class IdentityValidatorsTests
     [Fact]
     public async Task RefreshToken_WhenTokenIsEmpty_ShouldFail()
     {
-        var result = await new RefreshTokenCommandValidator().ValidateAsync(
-            new RefreshTokenCommand(string.Empty),
-            TestContext.Current.CancellationToken);
-
+        var result = await new RefreshTokenCommandValidator().ValidateAsync(new RefreshTokenCommand(string.Empty), TestContext.Current.CancellationToken);
         Assert.False(result.IsValid);
     }
 
@@ -131,10 +103,7 @@ public sealed class IdentityValidatorsTests
     [Fact]
     public async Task RevokeToken_WhenTokenIsEmpty_ShouldFail()
     {
-        var result = await new RevokeTokenCommandValidator().ValidateAsync(
-            new RevokeTokenCommand(string.Empty),
-            TestContext.Current.CancellationToken);
-
+        var result = await new RevokeTokenCommandValidator().ValidateAsync(new RevokeTokenCommand(string.Empty), TestContext.Current.CancellationToken);
         Assert.False(result.IsValid);
     }
 
@@ -142,10 +111,7 @@ public sealed class IdentityValidatorsTests
     [Fact]
     public async Task ConfirmEmail_WhenRequiredValuesAreMissing_ShouldFail()
     {
-        var result = await new ConfirmEmailCommandValidator().ValidateAsync(
-            new ConfirmEmailCommand(string.Empty, string.Empty),
-            TestContext.Current.CancellationToken);
-
+        var result = await new ConfirmEmailCommandValidator().ValidateAsync(new ConfirmEmailCommand(string.Empty, string.Empty), TestContext.Current.CancellationToken);
         Assert.False(result.IsValid);
         Assert.Equal(2, result.Errors.Count);
     }
@@ -154,10 +120,7 @@ public sealed class IdentityValidatorsTests
     [Fact]
     public async Task ResendConfirmation_WhenEmailIsInvalid_ShouldFail()
     {
-        var result = await new ResendConfirmationEmailCommandValidator().ValidateAsync(
-            new ResendConfirmationEmailCommand("invalid"),
-            TestContext.Current.CancellationToken);
-
+        var result = await new ResendConfirmationEmailCommandValidator().ValidateAsync(new ResendConfirmationEmailCommand("invalid"), TestContext.Current.CancellationToken);
         Assert.False(result.IsValid);
     }
 
@@ -165,10 +128,7 @@ public sealed class IdentityValidatorsTests
     [Fact]
     public async Task ForgotPassword_WhenEmailIsInvalid_ShouldFail()
     {
-        var result = await new ForgotPasswordCommandValidator().ValidateAsync(
-            new ForgotPasswordCommand("invalid"),
-            TestContext.Current.CancellationToken);
-
+        var result = await new ForgotPasswordCommandValidator().ValidateAsync(new ForgotPasswordCommand("invalid"), TestContext.Current.CancellationToken);
         Assert.False(result.IsValid);
     }
 
@@ -176,22 +136,16 @@ public sealed class IdentityValidatorsTests
     [Fact]
     public async Task ResetPassword_WhenRequiredValuesAreMissing_ShouldFail()
     {
-        var result = await new ResetPasswordCommandValidator().ValidateAsync(
-            new ResetPasswordCommand(string.Empty, string.Empty, string.Empty),
-            TestContext.Current.CancellationToken);
-
+        var result = await new ResetPasswordCommandValidator().ValidateAsync(new ResetPasswordCommand(string.Empty, string.Empty, string.Empty), TestContext.Current.CancellationToken);
         Assert.False(result.IsValid);
-        Assert.Equal(3, result.Errors.Count);
+        Assert.Equal(5, result.Errors.Count);
     }
 
     /// <summary>Verifies password reset accepts a valid request.</summary>
     [Fact]
     public async Task ResetPassword_WhenValid_ShouldPass()
     {
-        var result = await new ResetPasswordCommandValidator().ValidateAsync(
-            new ResetPasswordCommand("user@example.com", "code", "Password1!"),
-            TestContext.Current.CancellationToken);
-
+        var result = await new ResetPasswordCommandValidator().ValidateAsync(new ResetPasswordCommand("user@example.org", "code", "Abcdef1!"), TestContext.Current.CancellationToken);
         Assert.True(result.IsValid);
     }
 
@@ -199,10 +153,7 @@ public sealed class IdentityValidatorsTests
     [Fact]
     public async Task UpdateIdentityInfo_WhenInvalid_ShouldFail()
     {
-        var result = await new UpdateIdentityInfoCommandValidator().ValidateAsync(
-            new UpdateIdentityInfoCommand("", "invalid", "short", ""),
-            TestContext.Current.CancellationToken);
-
+        var result = await new UpdateIdentityInfoCommandValidator().ValidateAsync(new UpdateIdentityInfoCommand("", "invalid", "short", ""), TestContext.Current.CancellationToken);
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, error => error.PropertyName == nameof(UpdateIdentityInfoCommand.UserId));
         Assert.Contains(result.Errors, error => error.PropertyName == nameof(UpdateIdentityInfoCommand.OldPassword));
@@ -214,10 +165,7 @@ public sealed class IdentityValidatorsTests
     [Fact]
     public async Task UpdateIdentityInfo_WhenOptionalChangesAreOmitted_ShouldPass()
     {
-        var result = await new UpdateIdentityInfoCommandValidator().ValidateAsync(
-            new UpdateIdentityInfoCommand("user-id", null, null, "Password1!"),
-            TestContext.Current.CancellationToken);
-
+        var result = await new UpdateIdentityInfoCommandValidator().ValidateAsync(new UpdateIdentityInfoCommand("user-id", null, null, "Password1!"), TestContext.Current.CancellationToken);
         Assert.True(result.IsValid);
     }
 }

@@ -17,39 +17,33 @@ public sealed class PersistenceTests
         User user = new("user@example.com") { Email = "user@example.com" };
         await context.Users.AddAsync(user, TestContext.Current.CancellationToken);
         await context.SaveChangesAsync(true, "creator", TestContext.Current.CancellationToken);
-
         Assert.Equal("creator", user.CreatedBy);
         Assert.NotEqual(default, user.CreatedAt);
-
         user.DisplayName = "Updated";
         await context.SaveChangesAsync(true, "updater", TestContext.Current.CancellationToken);
         Assert.Equal("updater", user.UpdatedBy);
-
         context.Users.Remove(user);
         await context.SaveChangesAsync(true, "deleter", TestContext.Current.CancellationToken);
-
         Assert.True(user.IsDeleted);
         Assert.NotNull(user.DeletedAt);
         Assert.Null(await context.Users.FirstOrDefaultAsync(x => x.Id == user.Id, TestContext.Current.CancellationToken));
         Assert.NotNull(await context.Users.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Id == user.Id, TestContext.Current.CancellationToken));
     }
 
-    /// <summary>Verifies the synchronous save overloads invoke metadata and soft-delete processing.</summary>
+    /// <summary>Verifies the synchronous save overloads invoke metadata and soft-delete processing without an explicit user.</summary>
     [Fact]
     public void DbContext_SynchronousSaveOverloads_ShouldPersistChanges()
     {
         using LocalizrDbContext context = CreateContext();
-        User user = new("sync@example.com") { Email = "sync@example.com" };
-        context.Users.Add(user);
+        TestEntity entity = new();
+        context.Set<TestEntity>().Add(entity);
         Assert.Equal(1, context.SaveChanges(false));
-
-        user.DisplayName = "changed";
+        entity.Value = "changed";
         Assert.Equal(1, context.SaveChanges(true));
-
-        user.IsDeleted = false;
-        context.Users.Remove(user);
+        entity.IsDeleted = false;
+        context.Set<TestEntity>().Remove(entity);
         Assert.Equal(1, context.SaveChanges());
-        Assert.True(user.IsDeleted);
+        Assert.True(entity.IsDeleted);
     }
 
     /// <summary>Verifies the user-specific asynchronous save overload persists metadata.</summary>
@@ -59,23 +53,19 @@ public sealed class PersistenceTests
         await using LocalizrDbContext context = CreateContext();
         User user = new("async@example.com") { Email = "async@example.com" };
         await context.Users.AddAsync(user, TestContext.Current.CancellationToken);
-
         await context.SaveChangesAsync("async-user", TestContext.Current.CancellationToken);
-
         Assert.Equal("async-user", user.CreatedBy);
     }
 
-    /// <summary>Verifies the default asynchronous save overload can persist an unchanged entity.</summary>
+    /// <summary>Verifies the default asynchronous save overload can persist an entity without an explicit user identifier.</summary>
     [Fact]
     public async Task DbContext_DefaultAsyncOverload_ShouldHandleUnchangedEntity()
     {
         await using LocalizrDbContext context = CreateContext();
-        User user = new("unchanged@example.com") { Email = "unchanged@example.com" };
-        await context.Users.AddAsync(user, TestContext.Current.CancellationToken);
+        TestEntity entity = new();
+        await context.Set<TestEntity>().AddAsync(entity, TestContext.Current.CancellationToken);
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
         int result = await context.SaveChangesAsync(false, TestContext.Current.CancellationToken);
-
         Assert.Equal(0, result);
     }
 
@@ -86,16 +76,13 @@ public sealed class PersistenceTests
         await using LocalizrDbContext context = CreateContext();
         Repository<User> repository = new(context);
         User user = new("repository@example.com") { Email = "repository@example.com" };
-
         await repository.AddAsync(user, TestContext.Current.CancellationToken);
-        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
+        await context.SaveChangesAsync("repository-user", TestContext.Current.CancellationToken);
         User? byId = await repository.GetByIdAsync(user.Id, [], TestContext.Current.CancellationToken);
         User? tracked = await repository.GetTrackedByIdAsync(user.Id, [], TestContext.Current.CancellationToken);
         User? byPredicate = await repository.FirstOrDefaultAsync(x => x.Email == user.Email, [], TestContext.Current.CancellationToken);
         IReadOnlyList<User> all = await repository.ListAsync(null, [], TestContext.Current.CancellationToken);
         IReadOnlyList<User> filtered = await repository.ListAsync(x => x.Email == user.Email, [], TestContext.Current.CancellationToken);
-
         Assert.NotNull(byId);
         Assert.NotNull(tracked);
         Assert.NotNull(byPredicate);
@@ -103,14 +90,12 @@ public sealed class PersistenceTests
         Assert.Single(filtered);
         Assert.True(await repository.ExistsAsync(x => x.Email == user.Email, TestContext.Current.CancellationToken));
         Assert.False(await repository.ExistsAsync(x => x.Email == "missing@example.com", TestContext.Current.CancellationToken));
-
         tracked!.DisplayName = "updated";
         repository.Update(tracked);
-        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        await context.SaveChangesAsync("repository-user", TestContext.Current.CancellationToken);
         Assert.Equal("updated", (await repository.GetByIdAsync(user.Id, [], TestContext.Current.CancellationToken))!.DisplayName);
-
         repository.Remove(tracked);
-        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        await context.SaveChangesAsync("repository-user", TestContext.Current.CancellationToken);
         Assert.False(await repository.ExistsAsync(x => x.Id == user.Id, TestContext.Current.CancellationToken));
     }
 
@@ -124,11 +109,9 @@ public sealed class PersistenceTests
         User second = new("second@example.com") { Email = "second@example.com" };
         await repository.AddAsync(first, TestContext.Current.CancellationToken);
         await repository.AddAsync(second, TestContext.Current.CancellationToken);
-        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
+        await context.SaveChangesAsync("repository-user", TestContext.Current.CancellationToken);
         repository.RemoveRange([first, second]);
-        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
+        await context.SaveChangesAsync("repository-user", TestContext.Current.CancellationToken);
         Assert.False(await repository.ExistsAsync(x => x.Id == first.Id, TestContext.Current.CancellationToken));
         Assert.False(await repository.ExistsAsync(x => x.Id == second.Id, TestContext.Current.CancellationToken));
     }
@@ -138,7 +121,6 @@ public sealed class PersistenceTests
         DbContextOptions<LocalizrDbContext> options = new DbContextOptionsBuilder<LocalizrDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
             .Options;
-
         return new LocalizrDbContext(options);
     }
 }
@@ -151,7 +133,6 @@ public sealed class EntityBaseTests
     public void EntityBase_WhenDefaultsAreUsed_ShouldInitializeMetadata()
     {
         TestEntity entity = new();
-
         Assert.NotEmpty(entity.Id);
         Assert.NotEqual(default, entity.CreatedAt);
         Assert.Equal(string.Empty, entity.CreatedBy);
@@ -165,7 +146,6 @@ public sealed class EntityBaseTests
     {
         DateTimeOffset created = DateTimeOffset.UtcNow.AddMinutes(-5);
         TestEntity entity = new("id", created);
-
         Assert.Equal("id", entity.Id);
         Assert.Equal(created, entity.CreatedAt);
         Assert.Equal(created, entity.UpdatedAt);
@@ -180,4 +160,7 @@ internal sealed class TestEntity(string id = "", DateTimeOffset? createdAt = nul
 
     /// <summary>Gets or sets the deletion timestamp.</summary>
     public DateTimeOffset? DeletedAt { get; set; }
+
+    /// <summary>Gets or sets a test value.</summary>
+    public string Value { get; set; } = string.Empty;
 }

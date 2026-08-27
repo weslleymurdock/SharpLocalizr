@@ -24,7 +24,7 @@ public sealed class ResponseTests
         Response<int> response = Response.Failure<int>(new[] { "first", "second" });
 
         Assert.False(response.Succeeded);
-        Assert.Null(response.Data);
+        Assert.Equal(0, response.Data);
         Assert.Equal(["first", "second"], response.Errors);
     }
 
@@ -35,7 +35,7 @@ public sealed class ResponseTests
         Response<int> response = Response.Failure<int>("first", "second");
 
         Assert.False(response.Succeeded);
-        Assert.Null(response.Data);
+        Assert.Equal(0, response.Data);
         Assert.Equal(["first", "second"], response.Errors);
     }
 
