@@ -1,5 +1,7 @@
 using FluentAssertions;
 using Localizr.Application.Common.Responses;
+using Localizr.Application.Localization.Commands;
+using Localizr.Application.Localization.Requests;
 using Localizr.Application.Localization.Responses;
 using Localizr.Controllers.v1;
 using Mediator;
@@ -18,11 +20,12 @@ public sealed class LocalizationControllerTests
         IMediator mediator = Substitute.For<IMediator>();
         Dictionary<string, string> resources = new() { ["Hello"] = "Olá" };
         TranslateResourceResponse response = new(resources, "pt-BR");
-        mediator.Send(Arg.Any<object>(), Arg.Any<CancellationToken>()).Returns(response);
+        mediator.Send(Arg.Any<TranslateResourceCommand>(), Arg.Any<CancellationToken>())
+            .Returns(Response.Success(response));
 
         LocalizationController controller = new(mediator);
         IActionResult result = await controller.Translate(
-            new Application.Localization.Requests.TranslateResourceRequest(
+            new TranslateResourceRequest(
                 new Dictionary<string, string> { ["Hello"] = "Hello" },
                 "pt-BR"),
             CancellationToken.None);
