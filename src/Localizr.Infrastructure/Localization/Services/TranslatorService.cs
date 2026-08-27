@@ -10,13 +10,15 @@ namespace Localizr.Infrastructure.Localization.Services;
 
 /// <summary>Translates localization resource values through the Google Cloud Translation Basic API.</summary>
 /// <param name="httpClient">The HTTP client used to communicate with Google Cloud Translation.</param>
-/// <param name="options">The Google Cloud Translation configuration.</param>
+/// <param name="options">The monitored Google Cloud Translation configuration.</param>
+/// <param name="usageTracker">The current-instance translation usage tracker.</param>
 public sealed class TranslatorService(
     HttpClient httpClient,
-    IOptions<GoogleTranslateOptions> options) : ITranslatorService
+    IOptionsMonitor<GoogleTranslateOptions> options,
+    GoogleTranslateUsageTracker usageTracker) : ITranslatorService
 {
     private const int MaximumEntriesPerRequest = 128;
-    private readonly GoogleTranslateOptions _options = options.Value;
+    private readonly IOptionsMonitor<GoogleTranslateOptions> _options = options;
 
     /// <inheritdoc />
     public async Task<Dictionary<string, string>> TranslateToCultureAsync(
@@ -72,11 +74,12 @@ public sealed class TranslatorService(
         string culture,
         CancellationToken cancellationToken)
     {
-        Uri endpoint = new(_options.Endpoint, UriKind.Absolute);
+        GoogleTranslateOptions currentOptions = _options.CurrentValue;
+        Uri endpoint = new(currentOptions.Endpoint, UriKind.Absolute);
         Uri requestUri = new(endpoint, "language/translate/v2");
 
         using HttpRequestMessage request = new(HttpMethod.Post, requestUri);
-        request.Headers.Add("X-goog-api-key", _options.ApiKey);
+        request.Headers.Add("X-goog-api-key", currentOptions.ApiKey);
         request.Content = JsonContent.Create(new GoogleTranslateRequest(
             values,
             culture,
@@ -102,6 +105,8 @@ public sealed class TranslatorService(
                 "Google Cloud Translation returned an invalid response payload.");
         }
 
+        usageTracker.RecordUsage(values.Sum(value => (long)value.Length));
+
         return result.Data.Translations
             .Select(translation => translation.TranslatedText)
             .ToArray();
@@ -109,16 +114,18 @@ public sealed class TranslatorService(
 
     private void ValidateConfiguration()
     {
-        if (string.IsNullOrWhiteSpace(_options.ApiKey))
+        GoogleTranslateOptions currentOptions = _options.CurrentValue;
+
+        if (string.IsNullOrWhiteSpace(currentOptions.ApiKey))
         {
             throw new InvalidOperationException(
                 $"Google translation API key is not configured. Configure '{GoogleTranslateOptions.SectionName}:ApiKey'.");
         }
 
-        if (!Uri.TryCreate(_options.Endpoint, UriKind.Absolute, out Uri? endpoint))
+        if (!Uri.TryCreate(currentOptions.Endpoint, UriKind.Absolute, out Uri? endpoint))
         {
             throw new InvalidOperationException(
-                $"Google translation endpoint '{_options.Endpoint}' is not a valid absolute URI.");
+                $"Google translation endpoint '{currentOptions.Endpoint}' is not a valid absolute URI.");
         }
 
         if (!string.Equals(endpoint.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
