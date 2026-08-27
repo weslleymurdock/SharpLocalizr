@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Localizr.Application/Localizr.Application.csproj" />
+    <Project Path="src/Localizr.Composition/Localizr.Composition.csproj" />
+    <Project Path="src/Localizr.Domain/Localizr.Domain.csproj" />
+    <Project Path="src/Localizr.Infrastructure/Localizr.Infrastructure.csproj" />
+    <Project Path="src/Localizr/Localizr.csproj" />
+  </Folder>
+</Solution>
