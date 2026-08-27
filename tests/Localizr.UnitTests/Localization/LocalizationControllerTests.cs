@@ -33,4 +33,31 @@ public sealed class LocalizationControllerTests
         OkObjectResult ok = result.Should().BeOfType<OkObjectResult>().Subject;
         ok.Value.Should().Be(response);
     }
+
+    /// <summary>Verifies that the controller propagates the cancellation token to Mediator.</summary>
+    [Fact]
+    public async Task Translate_ShouldPropagateCancellationToken()
+    {
+        IMediator mediator = Substitute.For<IMediator>();
+        TranslateResourceResponse response = new(
+            new Dictionary<string, string> { ["Hello"] = "Olá" },
+            "pt-BR");
+        mediator.Send(Arg.Any<TranslateResourceCommand>(), Arg.Any<CancellationToken>())
+            .Returns(Response.Success(response));
+        LocalizationController controller = new(mediator);
+        using CancellationTokenSource cancellation = new();
+        CancellationToken token = cancellation.Token;
+
+        await controller.Translate(
+            new TranslateResourceRequest(
+                new Dictionary<string, string> { ["Hello"] = "Hello" },
+                "pt-BR"),
+            token);
+
+        await mediator.Received(1).Send(
+            Arg.Is<TranslateResourceCommand>(command =>
+                command.Culture == "pt-BR" &&
+                command.Resources["Hello"] == "Hello"),
+            token);
+    }
 }
