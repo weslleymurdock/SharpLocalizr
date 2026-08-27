@@ -72,10 +72,10 @@ public sealed class TranslatorService(
         string culture,
         CancellationToken cancellationToken)
     {
-        using HttpRequestMessage request = new(
-            HttpMethod.Post,
-            "language/translate/v2");
+        Uri endpoint = new(_options.Endpoint, UriKind.Absolute);
+        Uri requestUri = new(endpoint, "language/translate/v2");
 
+        using HttpRequestMessage request = new(HttpMethod.Post, requestUri);
         request.Headers.Add("X-goog-api-key", _options.ApiKey);
         request.Content = JsonContent.Create(new GoogleTranslateRequest(
             values,
