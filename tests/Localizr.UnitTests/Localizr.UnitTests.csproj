@@ -1,13 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <IsPackable>false</IsPackable>
-    <OutputType>Exe</OutputType>
-    <TestingPlatformCommandLineArguments>--report-trx --report-trx-filename test-results.trx --coverlet --coverlet-output-format cobertura</TestingPlatformCommandLineArguments>
-  </PropertyGroup>
+<PropertyGroup>
+  <TargetFramework>net10.0</TargetFramework>
+  <ImplicitUsings>enable</ImplicitUsings>
+  <Nullable>enable</Nullable>
+  <IsPackable>false</IsPackable>
+  <OutputType>Exe</OutputType>
+  <TestingPlatformCommandLineArguments>--report-trx --report-trx-filename test-results.trx --coverlet --coverlet-output-format cobertura --coverlet-include "[Localizr]*,[Localizr.Application]*,[Localizr.Domain]*,[Localizr.Infrastructure]*" --coverlet-exclude "[*.Migrations]*,[*.UnitTests]*,[Mediator*]*,[FluentValidation*]*,[Localizr]AspNetCoreGeneratedDocument.*,[Localizr]*.Components.*,[Localizr]*.Pages.*,[Localizr]*.Layout.*,[Localizr]*.Shared.*"</TestingPlatformCommandLineArguments>
+</PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="coverlet.MTP" Version="8.0.1">
@@ -26,9 +26,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="testconfig.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+    <None Include="testconfig.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,14 +1,40 @@
 {
   "platformOptions": {
-    "Coverlet": {
-      "include": "[Localizr.Application]*,[Localizr.Domain]*,[Localizr.Infrastructure]*,[Localizr]*",
-      "exclude": "[Localizr.UnitTests]*,[FluentValidation*]*,[Mediator*]*,[Microsoft.*]*,[System.*]*,[NSubstitute*]*,[Castle.*]*,[xunit.*]*,[coverlet.*]*,[testhost*]*,[Microsoft.Testing.*]*",
-      "excludeByAttribute": "GeneratedCodeAttribute,ExcludeFromCodeCoverageAttribute,CompilerGeneratedAttribute",
-      "excludeByFile": "**/*.g.cs,**/*.g.i.cs,**/obj/**/*.cs,**/Migrations/*.cs",
+    "coverlet": {
+      "include": "[Localizr]*,[Localizr.Application]*,[Localizr.Domain]*,[Localizr.Infrastructure]*",
+      "exclude": [
+        "[Localizr.UnitTests]*",
+        "[FluentValidation]*",
+        "[Mediator]*",
+        "[Xunit]*",
+        "[Microsoft.*]*",
+        "[Localizr]AspNetCoreGeneratedDocument.*",
+        "[Localizr]Localizr.Components.*",
+        "[Localizr]Localizr.Pages.*",
+        "[Localizr]Localizr.Shared.*",
+        "[Localizr]Localizr.Layout.*",
+        "[Localizr]*.Pages.*",
+        "[Localizr]*.Components.*",
+        "[Localizr]*.Layout.*",
+        "[Localizr]*.Shared.*",
+        "[Localizr]*.App",
+        "[Localizr]*.Routes"
+      ],
+      "excludeByAttribute": [
+        "GeneratedCodeAttribute",
+        "ExcludeFromCodeCoverageAttribute",
+        "CompilerGeneratedAttribute"
+      ],
+      "excludeByFile": [
+        "**/*.g.cs",
+        "**/*.g.i.cs",
+        "**/*.razor",
+        "**/*.razor.cs",
+        "**/obj/**/*.cs",
+        "**/*LoggerMessage*.cs"
+      ],
       "format": "cobertura",
       "includeTestAssembly": false,
-      "skipAutoProps": false,
-      "deterministicReport": false,
       "excludeAssembliesWithoutSources": "MissingAll"
     }
   }
