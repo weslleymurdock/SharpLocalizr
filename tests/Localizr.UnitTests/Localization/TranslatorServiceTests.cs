@@ -4,6 +4,7 @@ using Localizr.Infrastructure.Localization.Exceptions;
 using Localizr.Infrastructure.Localization.Options;
 using Localizr.Infrastructure.Localization.Services;
 using Microsoft.Extensions.Options;
+using NSubstitute;
 
 namespace Localizr.UnitTests.Localization;
 
@@ -74,13 +75,35 @@ public sealed class TranslatorServiceTests
             service.TranslateToCultureAsync(resources, "pt-BR", cancellationTokenSource.Token));
     }
 
-    private static TranslatorService CreateService(HttpClient client) => new(
-        client,
-        Options.Create(new GoogleTranslateOptions
+    private static TranslatorService CreateService(HttpClient client)
+    {
+        var optionsValues = new GoogleTranslateOptions
         {
             ApiKey = "test-key",
             Endpoint = "https://translation.googleapis.com/"
-        }));
+        };
+
+        IOptionsFactory<GoogleTranslateOptions> factory = new OptionsFactory<GoogleTranslateOptions>(
+            Enumerable.Empty<IConfigureOptions<GoogleTranslateOptions>>(),
+            Enumerable.Empty<IPostConfigureOptions<GoogleTranslateOptions>>(),
+            Enumerable.Empty<IValidateOptions<GoogleTranslateOptions>>()
+        );
+
+        var optionsMonitor = new OptionsMonitor<GoogleTranslateOptions>(
+            factory,
+            Enumerable.Empty<IOptionsChangeTokenSource<GoogleTranslateOptions>>(),
+            new OptionsCache<GoogleTranslateOptions>()
+        );
+
+        optionsMonitor.CurrentValue.ApiKey = optionsValues.ApiKey;
+        optionsMonitor.CurrentValue.Endpoint = optionsValues.Endpoint;
+
+        return new TranslatorService(
+            client,
+            optionsMonitor,
+            usageTracker: Substitute.For<GoogleTranslateUsageTracker>() 
+        );
+    }
 
     private static HttpClient CreateClient(HttpMessageHandler handler)
     {
