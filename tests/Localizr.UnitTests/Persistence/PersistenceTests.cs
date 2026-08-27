@@ -117,31 +117,28 @@ public sealed class PersistenceTests
         Assert.False(await repository.ExistsAsync(x => x.Id == second.Id, TestContext.Current.CancellationToken));
     }
 
-    private static LocalizrDbContext CreateContext()
-    {
-        DbContextOptions<LocalizrDbContext> options = new DbContextOptionsBuilder<LocalizrDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
-            .Options;
-        return new LocalizrDbContext(options);
-    }
-}
-
-/// <summary>Contains tests for domain persistence metadata defaults.</summary>
-public sealed class EntityBaseTests
-{
-    /// <summary>Verifies generated identifiers and default timestamps are initialized.</summary>
+    /// <summary>Verifies repository lookup methods return null when an identifier or predicate does not match.</summary>
     [Fact]
-    public void EntityBase_WhenDefaultsAreUsed_ShouldInitializeMetadata()
+    public async Task Repository_WhenEntityDoesNotExist_ShouldReturnNull()
     {
-        TestEntity entity = new();
-        Assert.NotEmpty(entity.Id);
-        Assert.NotEqual(default, entity.CreatedAt);
-        Assert.Equal(string.Empty, entity.CreatedBy);
-        Assert.Equal(entity.CreatedAt, entity.UpdatedAt);
-        Assert.Equal(string.Empty, entity.UpdatedBy);
+        await using LocalizrDbContext context = CreateContext();
+        Repository<User> repository = new(context);
+        Assert.Null(await repository.GetByIdAsync("missing", [], TestContext.Current.CancellationToken));
+        Assert.Null(await repository.GetTrackedByIdAsync("missing", [], TestContext.Current.CancellationToken));
+        Assert.Null(await repository.FirstOrDefaultAsync(x => x.Email == "missing@example.com", [], TestContext.Current.CancellationToken));
     }
 
-    /// <summary>Verifies supplied identifiers and creation timestamps are preserved.</summary>
+    /// <summary>Verifies repository list operations support an empty result.</summary>
+    [Fact]
+    public async Task Repository_ListAsync_WhenNoEntitiesMatch_ShouldReturnEmptyList()
+    {
+        await using LocalizrDbContext context = CreateContext();
+        Repository<User> repository = new(context);
+        IReadOnlyList<User> result = await repository.ListAsync(x => x.Email == "missing@example.com", [], TestContext.Current.CancellationToken);
+        Assert.Empty(result);
+    }
+
+    /// <summary>Verifies domain entities preserve metadata supplied to their base constructor.</summary>
     [Fact]
     public void EntityBase_WhenValuesAreSupplied_ShouldPreserveThem()
     {
@@ -150,6 +147,29 @@ public sealed class EntityBaseTests
         Assert.Equal("id", entity.Id);
         Assert.Equal(created, entity.CreatedAt);
         Assert.Equal(created, entity.UpdatedAt);
+    }
+
+    /// <summary>Verifies domain entities initialize generated metadata without requiring exact clock precision.</summary>
+    [Fact]
+    public void EntityBase_WhenDefaultsAreUsed_ShouldInitializeMetadata()
+    {
+        DateTimeOffset before = DateTimeOffset.UtcNow;
+        TestEntity entity = new();
+        DateTimeOffset after = DateTimeOffset.UtcNow;
+
+        Assert.NotEmpty(entity.Id);
+        Assert.InRange(entity.CreatedAt, before, after);
+        Assert.Equal(string.Empty, entity.CreatedBy);
+        Assert.Equal(entity.CreatedAt, entity.UpdatedAt);
+        Assert.Equal(string.Empty, entity.UpdatedBy);
+    }
+
+    private static LocalizrDbContext CreateContext()
+    {
+        DbContextOptions<LocalizrDbContext> options = new DbContextOptionsBuilder<LocalizrDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .Options;
+        return new LocalizrDbContext(options);
     }
 }
 

@@ -76,16 +76,15 @@ jobs:
         if: always()
         shell: pwsh
         run: |
-          $coverageFiles = @(Get-ChildItem -Path "$env:GITHUB_WORKSPACE/artifacts/test-results" -Filter 'coverage.cobertura.xml' -Recurse -File -ErrorAction SilentlyContinue)
+          $coverageFile = Join-Path $env:GITHUB_WORKSPACE 'artifacts/test-results/Cobertura.xml'
 
-          if ($coverageFiles.Count -eq 0) {
-            "## Coverage gate`n`nNo Coverlet XML was found under the test-results directory." | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
-            Write-Error "Coverage data was not produced."
+          if (-not (Test-Path $coverageFile)) {
+            "## Coverage gate`n`nThe filtered ReportGenerator Cobertura report was not produced." | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+            Write-Error "Filtered coverage data was not produced."
             return
           }
 
-          $coverageFile = $coverageFiles | Select-Object -First 1
-          [xml]$coverage = Get-Content $coverageFile.FullName
+          [xml]$coverage = Get-Content $coverageFile
           $lineRate = [double]$coverage.coverage.'line-rate' * 100
           $branchRate = [double]$coverage.coverage.'branch-rate' * 100
 
@@ -100,12 +99,11 @@ jobs:
           "LINE_COVERAGE=$([math]::Round($lineRate, 2))" | Out-File artifacts/line-rate.txt -Encoding utf8
           "BRANCH_COVERAGE=$([math]::Round($branchRate, 2))" | Out-File artifacts/branch-rate.txt -Encoding utf8
 
-          if ($lineRate -lt 80)
-          {
-            Write-Error "Branch Coverage gate failed. `nLine coverage: $([math]::Round($lineRate, 2))%; minimum: 80%."
+          if ($lineRate -lt 80) {
+            Write-Error "Line coverage gate failed. `nLine coverage: $([math]::Round($lineRate, 2))%; minimum: 80%."
           }
-          if($branchRate -lt 80) {
-            Write-Error "Branch Coverage gate failed. `nBranch coverage: $([math]::Round($branchRate, 2))%; minimum: 80%."
+          if ($branchRate -lt 80) {
+            Write-Error "Branch coverage gate failed. `nBranch coverage: $([math]::Round($branchRate, 2))%; minimum: 80%."
           }
 
       - name: Append test execution report
