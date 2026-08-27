@@ -1,4 +1,3 @@
-using Localizr.Domain.Common;
 using Localizr.Infrastructure.Common.Repository;
 using Localizr.Infrastructure.Identity.Models;
 using Localizr.Infrastructure.Persistence;
@@ -30,20 +29,22 @@ public sealed class PersistenceTests
         Assert.NotNull(await context.Users.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Id == user.Id, TestContext.Current.CancellationToken));
     }
 
-    /// <summary>Verifies the synchronous save overloads invoke metadata and soft-delete processing without an explicit user.</summary>
+    /// <summary>Verifies the synchronous save overloads persist metadata without an explicit user identifier.</summary>
     [Fact]
     public void DbContext_SynchronousSaveOverloads_ShouldPersistChanges()
     {
         using LocalizrDbContext context = CreateContext();
-        TestEntity entity = new();
-        context.Set<TestEntity>().Add(entity);
+        User user = new("sync@example.com") { Email = "sync@example.com" };
+        context.Users.Add(user);
         Assert.Equal(1, context.SaveChanges(false));
-        entity.Value = "changed";
+        Assert.Equal(string.Empty, user.CreatedBy);
+        user.DisplayName = "changed";
         Assert.Equal(1, context.SaveChanges(true));
-        entity.IsDeleted = false;
-        context.Set<TestEntity>().Remove(entity);
+        Assert.Equal(string.Empty, user.UpdatedBy);
+        user.IsDeleted = false;
+        context.Users.Remove(user);
         Assert.Equal(1, context.SaveChanges());
-        Assert.True(entity.IsDeleted);
+        Assert.True(user.IsDeleted);
     }
 
     /// <summary>Verifies the user-specific asynchronous save overload persists metadata.</summary>
@@ -62,8 +63,8 @@ public sealed class PersistenceTests
     public async Task DbContext_DefaultAsyncOverload_ShouldHandleUnchangedEntity()
     {
         await using LocalizrDbContext context = CreateContext();
-        TestEntity entity = new();
-        await context.Set<TestEntity>().AddAsync(entity, TestContext.Current.CancellationToken);
+        User user = new("unchanged@example.com") { Email = "unchanged@example.com" };
+        await context.Users.AddAsync(user, TestContext.Current.CancellationToken);
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         int result = await context.SaveChangesAsync(false, TestContext.Current.CancellationToken);
         Assert.Equal(0, result);
@@ -153,14 +154,11 @@ public sealed class EntityBaseTests
 }
 
 /// <summary>Provides a concrete entity for testing the domain base class.</summary>
-internal sealed class TestEntity(string id = "", DateTimeOffset? createdAt = null) : EntityBase(id, createdAt), ISoftDeletable
+internal sealed class TestEntity(string id = "", DateTimeOffset? createdAt = null) : Localizr.Domain.Common.EntityBase(id, createdAt), Localizr.Domain.Common.ISoftDeletable
 {
     /// <summary>Gets or sets whether the entity is deleted.</summary>
     public bool IsDeleted { get; set; }
 
     /// <summary>Gets or sets the deletion timestamp.</summary>
     public DateTimeOffset? DeletedAt { get; set; }
-
-    /// <summary>Gets or sets a test value.</summary>
-    public string Value { get; set; } = string.Empty;
 }
