@@ -86,13 +86,15 @@ public sealed class HealthTests
     [Fact]
     public async Task GetProviderNameAsync_WhenProviderNameIsMissing_ShouldReturnPostgreSQL()
     {
-        DbContextOptions<LocalizrDbContext> options = new DbContextOptionsBuilder<LocalizrDbContext>().Options;
-        await using LocalizrDbContext context = new(options);
+        LocalizrDbContext context = Substitute.For<LocalizrDbContext>(
+            new DbContextOptions<LocalizrDbContext>());
+        context.Database.ProviderName.Returns((string?)null);
         HealthService service = new(context);
 
         string result = await service.GetProviderNameAsync();
 
         Assert.Equal("PostgreSQL", result);
+        context.Dispose();
     }
 
     private static LocalizrDbContext CreateContext()
