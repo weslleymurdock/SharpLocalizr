@@ -104,12 +104,6 @@ public sealed class LocalizrDbContext(DbContextOptions<LocalizrDbContext> option
         {
             if (entry.State == EntityState.Added)
             {
-                if (entry.Entity is User || entry.Entity is Role)
-                {
-                    entry.Entity.Id = Guid.CreateVersion7().ToString();
-                }
-
-                entry.Entity.CreatedAt = DateTimeOffset.UtcNow;
                 if (!string.IsNullOrWhiteSpace(userId))
                 {
                     entry.Entity.CreatedBy = userId;
