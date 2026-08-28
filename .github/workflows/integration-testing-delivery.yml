@@ -65,6 +65,7 @@ jobs:
         if: always()
         shell: pwsh
         run: |
+          New-Item -ItemType Directory -Force -Path ./artifacts/coverage | Out-Null
           $coverageFiles = @(Get-ChildItem -Path "$env:GITHUB_WORKSPACE/artifacts/test-results" -Filter 'coverage.cobertura.xml' -Recurse -File -ErrorAction SilentlyContinue)
           if ($coverageFiles.Count -gt 0) {
             dotnet tool run reportgenerator -reports:"./artifacts/test-results/coverage.cobertura.xml" -targetdir:"./artifacts/test-results" "-reporttypes:Markdown;cobertura" "-assemblyfilters:+Localizr*;-FluentValidation*;-Mediator*" "-classfilters:+*;-AspNetCoreGeneratedDocument*;-*Components*;-*.Components.*;-*.Pages.*;-*.Layout.*;-*.Shared.*;-*.Migrations.*" "-filefilters:-**/*.razor;-**/*.razor.cs;-**/obj/**/*.cs;-**/*.g.cs;-**/*LoggerMessageGenerator*/*"
@@ -109,7 +110,7 @@ jobs:
       - name: Append test execution report
         if: always()
         shell: pwsh
-        run: if (Test-Path artifacts/test-results/Summary.md) { Get-Content artifacts/test-results/Summary.md | Add-Content $env:GITHUB_STEP_SUMMARY } else { Add-Content $env:GITHUB_STEP_SUMMARY 'Coverage report was not generated.' }
+        run: if (Test-Path artifacts/coverage/Summary.md) { Get-Content artifacts/coverage/Summary.md | Add-Content $env:GITHUB_STEP_SUMMARY } else { Add-Content $env:GITHUB_STEP_SUMMARY 'Coverage report was not generated.' }
 
       - name: Upload test and coverage reports
         if: always()
