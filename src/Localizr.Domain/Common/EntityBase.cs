@@ -6,13 +6,16 @@ namespace Localizr.Domain.Common;
 public abstract class EntityBase(string id = "",
     DateTimeOffset? createdAt = null) : IEntityBase
 {
+    private readonly DateTimeOffset initialTimestamp =
+        createdAt ?? DateTimeOffset.UtcNow;
+
     /// <inheritdoc />
     public string Id { get; set; } = id == string.Empty ?
         Guid.CreateVersion7().ToString() : id;
 
     /// <inheritdoc />
     public DateTimeOffset CreatedAt { get; set; } =
-        createdAt ?? DateTimeOffset.UtcNow;
+        initialTimestamp;
 
     /// <inheritdoc />
     public string CreatedBy { get; set; } =
@@ -20,7 +23,7 @@ public abstract class EntityBase(string id = "",
 
     /// <inheritdoc />
     public DateTimeOffset UpdatedAt { get; set; } =
-        createdAt ?? DateTimeOffset.UtcNow;
+        initialTimestamp;
 
     /// <inheritdoc />
     public string UpdatedBy { get; set; } =

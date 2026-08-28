@@ -34,8 +34,8 @@ public sealed class RegisterCommandValidator : AbstractValidator<RegisterCommand
     }
 
     private static bool HasRequiredPasswordCharacters(string? password)
-        => !string.IsNullOrEmpty(password)
-            && password.Any(char.IsUpper)
+        => string.IsNullOrEmpty(password)
+            || password.Any(char.IsUpper)
             && password.Any(char.IsLower)
             && password.Any(char.IsDigit)
             && password.Any(c => !char.IsLetterOrDigit(c) && !char.IsWhiteSpace(c));
@@ -69,8 +69,8 @@ public sealed class LoginCommandValidator : AbstractValidator<LoginCommand>
     }
 
     private static bool HasRequiredPasswordCharacters(string? password)
-        => !string.IsNullOrEmpty(password)
-            && password.Any(char.IsUpper)
+        => string.IsNullOrEmpty(password)
+            || password.Any(char.IsUpper)
             && password.Any(char.IsLower)
             && password.Any(char.IsDigit)
             && password.Any(c => !char.IsLetterOrDigit(c) && !char.IsWhiteSpace(c));
@@ -159,8 +159,8 @@ public sealed class ResetPasswordCommandValidator : AbstractValidator<ResetPassw
     }
 
     private static bool HasRequiredPasswordCharacters(string? password)
-        => !string.IsNullOrEmpty(password)
-            && password.Any(char.IsUpper)
+        => string.IsNullOrEmpty(password)
+            || password.Any(char.IsUpper)
             && password.Any(char.IsLower)
             && password.Any(char.IsDigit)
             && password.Any(c => !char.IsLetterOrDigit(c) && !char.IsWhiteSpace(c));
