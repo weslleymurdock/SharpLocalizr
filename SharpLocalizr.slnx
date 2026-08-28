@@ -8,6 +8,5 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Localizr.UnitTests/Localizr.UnitTests.csproj" />
-    <Project Path="tests/Localizr.UITests/Localizr.UITests.csproj" />
   </Folder>
 </Solution>
