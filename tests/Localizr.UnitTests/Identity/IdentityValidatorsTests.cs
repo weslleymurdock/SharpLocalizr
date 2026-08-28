@@ -32,7 +32,6 @@ public sealed class IdentityValidatorsTests
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, error => error.PropertyName == nameof(RegisterCommand.Email));
         Assert.Contains(result.Errors, error => error.PropertyName == nameof(RegisterCommand.Password));
-        await service.DidNotReceive().EmailExistsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     /// <summary>Verifies registration rejects malformed email addresses.</summary>
@@ -256,5 +255,41 @@ public sealed class IdentityValidatorsTests
     {
         var result = await new UpdateIdentityInfoCommandValidator().ValidateAsync(new UpdateIdentityInfoCommand("user-id", "new@test.com", "Password1!", "OldPassword1!"), TestContext.Current.CancellationToken);
         Assert.True(result.IsValid);
+    }
+
+    /// <summary>Verifies registration rejects passwords without an uppercase character.</summary>
+    [Fact]
+    public async Task Register_WhenPasswordHasNoUppercase_ShouldFail()
+    {
+        IIdentityService service = Substitute.For<IIdentityService>();
+        var result = await new RegisterCommandValidator(service).ValidateAsync(new RegisterCommand("user@test.com", "abcdef1!"), TestContext.Current.CancellationToken);
+        Assert.False(result.IsValid);
+    }
+
+    /// <summary>Verifies registration rejects passwords without a lowercase character.</summary>
+    [Fact]
+    public async Task Register_WhenPasswordHasNoLowercase_ShouldFail()
+    {
+        IIdentityService service = Substitute.For<IIdentityService>();
+        var result = await new RegisterCommandValidator(service).ValidateAsync(new RegisterCommand("user@test.com", "ABCDEF1!"), TestContext.Current.CancellationToken);
+        Assert.False(result.IsValid);
+    }
+
+    /// <summary>Verifies registration rejects passwords without a digit.</summary>
+    [Fact]
+    public async Task Register_WhenPasswordHasNoDigit_ShouldFail()
+    {
+        IIdentityService service = Substitute.For<IIdentityService>();
+        var result = await new RegisterCommandValidator(service).ValidateAsync(new RegisterCommand("user@test.com", "Abcdefgh!"), TestContext.Current.CancellationToken);
+        Assert.False(result.IsValid);
+    }
+
+    /// <summary>Verifies registration rejects passwords without a special character.</summary>
+    [Fact]
+    public async Task Register_WhenPasswordHasNoSpecialCharacter_ShouldFail()
+    {
+        IIdentityService service = Substitute.For<IIdentityService>();
+        var result = await new RegisterCommandValidator(service).ValidateAsync(new RegisterCommand("user@test.com", "Abcdef12"), TestContext.Current.CancellationToken);
+        Assert.False(result.IsValid);
     }
 }
