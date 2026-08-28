@@ -1,12 +1,14 @@
 using Localizr.Application.Common.Abstractions;
 using Localizr.Application.Common.Contracts;
 using Localizr.Application.Common.Pipeline.Validation;
+using Localizr.Application.Health.Abstractions;
 using Localizr.Application.Identity.Abstractions;
 using Localizr.Application.Identity.Handlers;
 using Localizr.Application.Identity.Validators;
 using Localizr.Application.Localization.Abstractions;
 using Localizr.Infrastructure.Common.Repository;
 using Localizr.Infrastructure.Common.UnitOfWork;
+using Localizr.Infrastructure.Health.Services;
 using Localizr.Infrastructure.Identity.Models;
 using Localizr.Infrastructure.Identity.Options;
 using Localizr.Infrastructure.Identity.Services;
@@ -73,7 +75,7 @@ public static class WebApplicationBuilderExtensions
                     .AddEntityFrameworkStores<LocalizrDbContext>()
                     .AddSignInManager()
                     .AddDefaultTokenProviders();
-
+            builder.Services.AddScoped<IHealthService, HealthService>();
             builder.Services.AddScoped<IIdentityService, IdentityService>();
             builder.Services.AddSingleton<IRevokedTokenStore, RevokedTokenStore>();
             builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();

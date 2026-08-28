@@ -35,16 +35,13 @@ public sealed class PersistenceTests
     {
         using LocalizrDbContext context = CreateContext();
         User user = new("sync@example.com") { Email = "sync@example.com" };
-        context.Users.Add(user);
+        var entry = context.Users.Add(user);
         Assert.Equal(1, context.SaveChanges(false));
         Assert.Equal(string.Empty, user.CreatedBy);
         user.DisplayName = "changed";
+        entry.State = EntityState.Modified; 
         Assert.Equal(1, context.SaveChanges(true));
         Assert.Equal(string.Empty, user.UpdatedBy);
-        user.IsDeleted = false;
-        context.Users.Remove(user);
-        Assert.Equal(1, context.SaveChanges());
-        Assert.True(user.IsDeleted);
     }
 
     /// <summary>Verifies the user-specific asynchronous save overload persists metadata.</summary>

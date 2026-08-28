@@ -1,0 +1,238 @@
+﻿@page "/healthcheck"
+@using System.Diagnostics
+@using System.Runtime.InteropServices
+@using Localizr.Application.Health.Queries
+
+@inject NavigationManager NavManager 
+<PageTitle>Health Check & Diagnósticos</PageTitle>
+<MudContainer Class="pa-8 ma-8">
+
+<MudText Typo="Typo.h4" Class="mb-4">Status do Ambiente & Diagnósticos</MudText>
+
+<MudGrid Justify="Justify.SpaceAround">
+    <!-- Card de Uso de CPU -->
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Elevation="3">
+            <MudCardContent>
+                <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Uso de CPU</MudText>
+                <MudText Typo="Typo.h4" Class="my-2">@_cpuUsagePercent.ToString("F1")%</MudText>
+                <MudProgressLinear Color="@GetCpuColor(_cpuUsagePercent)" Value="@_cpuUsagePercent" Class="my-1" />
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <!-- Card de Uso de RAM -->
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Elevation="3">
+            <MudCardContent>
+                <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Uso de RAM (Working Set)</MudText>
+                <MudText Typo="Typo.h4" Class="my-2">@FormatBytes(_ramUsedBytes)</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Default">
+                    GC Heap: @FormatBytes(_gcHeapBytes)
+                </MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <!-- Card de Uptime -->
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Elevation="3">
+            <MudCardContent>
+                <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Tempo de Atividade</MudText>
+                <MudText Typo="Typo.h6" Class="mt-2">@FormatUptime(_uptime)</MudText>
+                <MudText Typo="Typo.caption">PID: @_processId</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <!-- Card de Status Geral -->
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Elevation="3">
+            <MudCardContent>
+                <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Ambiente</MudText>
+                <MudChip T="string" Color="Color.Info" Size="Size.Small" Class="mt-2">@_environmentName</MudChip>
+                <MudText Typo="Typo.caption" Class="d-block mt-1"><b>SDK:</b> @_dotnetVersion</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <!-- Detalhes do Ambiente -->
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-4" Elevation="3">
+            <MudText Typo="Typo.h6" Class="mb-3">Informações do Sistema</MudText>
+            <MudSimpleTable Style="overflow-x: auto;">
+                <tbody>
+                    <tr>
+                        <td><b>Nome da Máquina / Container</b></td>
+                        <td>@Environment.MachineName</td>
+                    </tr>
+                    <tr>
+                        <td><b>Sistema Operacional</b></td>
+                        <td>@RuntimeInformation.OSDescription (@RuntimeInformation.OSArchitecture)</td>
+                    </tr>
+                    <tr>
+                        <td><b>Processadores Lógicos</b></td>
+                        <td>@Environment.ProcessorCount vCPUs</td>
+                    </tr>
+                    <tr>
+                        <td><b>Cota do GC (Memory Limit)</b></td>
+                        <td>@FormatBytes(_gcTotalMemoryLimit)</td>
+                    </tr>
+                </tbody>
+            </MudSimpleTable>
+        </MudPaper>
+    </MudItem>
+
+    <!-- Conexões com Providers -->
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-4" Elevation="3">
+            <MudText Typo="Typo.h6" Class="mb-3">Serviços e Conexões</MudText>
+            <MudList T="string" Clickable="false">
+                <MudListItem Icon="@Icons.Material.Filled.Storage">
+                    <div class="d-flex justify-space-between align-center">
+                        <div>
+                            <MudText Typo="Typo.body1">Banco de Dados (SQL/Mongo)</MudText>
+                            <MudText Typo="Typo.caption">@_dbConnectionStringSource</MudText>
+                        </div>
+                        <MudChip T="string" Color="@(_dbStatus ? Color.Success : Color.Error)" Size="Size.Small">
+                            @(_dbStatus ? "Conectado" : "Falha")
+                        </MudChip>
+                    </div>
+                </MudListItem>
+                <MudDivider />
+                <MudListItem Icon="@Icons.Material.Filled.CloudQueue">
+                    <div class="d-flex justify-space-between align-center">
+                        <div>
+                            <MudText Typo="Typo.body1">Storage Provider</MudText>
+                            <MudText Typo="Typo.caption">@_storageProviderName</MudText>
+                        </div>
+                        <MudChip T="string" Color="@(_storageStatus ? Color.Success : Color.Error)" Size="Size.Small">
+                            @(_storageStatus ? "Disponível" : "Indisponível")
+                        </MudChip>
+                    </div>
+                </MudListItem>
+            </MudList>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" Class="mt-2" OnClick="CheckConnectionsAsync">
+                Testar Conexões Novamente
+            </MudButton>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+</MudContainer>
+
+@code {
+    private double _cpuUsagePercent;
+    private long _ramUsedBytes;
+    private long _gcHeapBytes;
+    private long _gcTotalMemoryLimit;
+    private TimeSpan _uptime;
+    private int _processId;
+    private string _environmentName = "N/A";
+    private string _dotnetVersion = "N/A";
+
+    private bool _dbStatus = false;
+    private string _dbConnectionStringSource = "Desconhecido";
+    private bool _storageStatus = false;
+    private string _storageProviderName = "PostgresSQL";
+
+    private Process _currentProcess = Process.GetCurrentProcess();
+    private TimeSpan _lastProcessorTime;
+    private DateTime _lastSnapshotTime;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _processId = _currentProcess.Id;
+        _environmentName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
+        _dotnetVersion = RuntimeInformation.FrameworkDescription;
+
+        // Leitura inicial para cálculo de CPU
+        _lastProcessorTime = _currentProcess.TotalProcessorTime;
+        _lastSnapshotTime = DateTime.UtcNow;
+
+        CollectMetrics();
+        await CheckConnectionsAsync();
+    }
+
+    private void CollectMetrics()
+    {
+        _currentProcess.Refresh();
+
+        // 1. Cálculo de Memória
+        _ramUsedBytes = _currentProcess.WorkingSet64;
+        var gcInfo = GC.GetGCMemoryInfo();
+        _gcHeapBytes = gcInfo.HeapSizeBytes;
+        _gcTotalMemoryLimit = gcInfo.TotalAvailableMemoryBytes;
+
+        // 2. Cálculo do Uptime
+        _uptime = DateTime.UtcNow - _currentProcess.StartTime.ToUniversalTime();
+
+        // 3. Cálculo aproximado de CPU %
+        var currentTime = DateTime.UtcNow;
+        var currentProcessorTime = _currentProcess.TotalProcessorTime;
+
+        var timeDiff = (currentTime - _lastSnapshotTime).TotalMilliseconds;
+        var cpuDiff = (currentProcessorTime - _lastProcessorTime).TotalMilliseconds;
+
+        if (timeDiff > 0)
+        {
+            // Divide pelo número de CPUs para obter a porcentagem de uso total do sistema
+            _cpuUsagePercent = (cpuDiff / (timeDiff * Environment.ProcessorCount)) * 100;
+        }
+
+        _lastSnapshotTime = currentTime;
+        _lastProcessorTime = currentProcessorTime;
+    }
+
+    private async Task CheckConnectionsAsync()
+    {
+        // Exemplo de verificação de DB (Ajuste conforme seu ORM/Driver)
+        try
+        {
+            var response = await Mediator.Send(new CanConnectAsyncQuery());
+            _dbStatus = response.Data;
+            _dbConnectionStringSource = _dbStatus ? "Host do Banco Acessível" : "Erro ao conectar";
+        }
+        catch
+        {
+            _dbStatus = false;
+            _dbConnectionStringSource = "Erro ao conectar";
+        }
+
+        // Exemplo de verificação de Storage
+        try
+        {
+            // Exemplo: checar resposta de Ping/Bucket no S3 ou Azure Blob
+            _storageStatus = true; // Simulado
+            _storageProviderName = "Cloudflare KV";
+        }
+        catch
+        {
+            _storageStatus = false;
+        }
+    }
+
+    private string FormatBytes(long bytes)
+    {
+        string[] suffix = { "B", "KB", "MB", "GB", "TB" };
+        int i;
+        double dblSByte = bytes;
+        for (i = 0; i < suffix.Length && bytes >= 1024; i++, bytes /= 1024)
+        {
+            dblSByte = bytes / 1024.0;
+        }
+        return $"{dblSByte:0.##} {suffix[i]}";
+    }
+
+    private string FormatUptime(TimeSpan ts)
+    {
+        return $"{ts.Days}d {ts.Hours}h {ts.Minutes}m {ts.Seconds}s";
+    }
+
+    private Color GetCpuColor(double cpu)
+    {
+        if (cpu < 50) return Color.Success;
+        if (cpu < 80) return Color.Warning;
+        return Color.Error;
+    }
+}
