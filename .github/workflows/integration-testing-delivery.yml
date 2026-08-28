@@ -76,13 +76,12 @@ jobs:
         if: always()
         shell: pwsh
         run: |
-          $coverageFiles = @(Get-ChildItem -Path "$env:GITHUB_WORKSPACE/artifacts" -Filter 'coverage*.xml' -Recurse -File -ErrorAction SilentlyContinue)
-          if ($coverageFiles.Count -le 0) {
+          $coverageFile = Join-Path $env:GITHUB_WORKSPACE 'artifacts/Cobertura.xml'
+          if (-not (Test-Path $coverageFile)) {
             "## Coverage gate`n`nThe filtered ReportGenerator Cobertura report was not produced." | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
             Write-Error "Filtered coverage data was not produced."
             return
           }
-          $coverageFile = $coverageFiles[0]
           [xml]$coverage = Get-Content $coverageFile
           $lineRate = [double]$coverage.coverage.'line-rate' * 100
           $branchRate = [double]$coverage.coverage.'branch-rate' * 100
