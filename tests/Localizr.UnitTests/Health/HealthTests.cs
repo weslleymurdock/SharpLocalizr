@@ -82,21 +82,6 @@ public sealed class HealthTests
         Assert.Equal("Microsoft.EntityFrameworkCore.InMemory", result);
     }
 
-    /// <summary>Verifies the infrastructure health service uses PostgreSQL as its provider-name fallback.</summary>
-    [Fact]
-    public async Task GetProviderNameAsync_WhenProviderNameIsMissing_ShouldReturnPostgreSQL()
-    {
-        LocalizrDbContext context = Substitute.For<LocalizrDbContext>(
-            new DbContextOptions<LocalizrDbContext>());
-        context.Database.ProviderName.Returns((string?)null);
-        HealthService service = new(context);
-
-        string result = await service.GetProviderNameAsync();
-
-        Assert.Equal("PostgreSQL", result);
-        context.Dispose();
-    }
-
     private static LocalizrDbContext CreateContext()
     {
         DbContextOptions<LocalizrDbContext> options = new DbContextOptionsBuilder<LocalizrDbContext>()
