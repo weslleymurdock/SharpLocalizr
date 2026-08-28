@@ -16,7 +16,7 @@ public class Role(
     /// <summary>
     /// Gets or sets the identity identifier.
     /// </summary>
-    public override string Id { get; set; } =
+    public new string Id { get; set; } =
         Guid.CreateVersion7().ToString();
 
     /// <summary>

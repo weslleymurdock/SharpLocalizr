@@ -4,7 +4,6 @@ using FluentValidation;
 
 namespace Localizr.Application.Identity.Validators;
 
-
 /// <summary>Validates registration requests.</summary>
 public sealed class RegisterCommandValidator : AbstractValidator<RegisterCommand>
 {
@@ -29,10 +28,17 @@ public sealed class RegisterCommandValidator : AbstractValidator<RegisterCommand
             .MinimumLength(8)
             .WithMessage("The new password needs to have at least 8 characters.")
             .WithErrorCode("UNPROCESSABLE_ENTITY")
-            .Must(pwd => pwd.All(c => char.IsLetter(c) || char.IsDigit(c) || char.IsUpper(c) || char.IsLower(c) || char.IsSymbol(c)))
+            .Must(HasRequiredPasswordCharacters)
             .WithErrorCode("UNPROCESSABLE_ENTITY")
             .WithMessage("The password must have at least one letter upper and lower case, one digit and one special character");
     }
+
+    private static bool HasRequiredPasswordCharacters(string? password)
+        => string.IsNullOrEmpty(password)
+            || password.Any(char.IsUpper)
+            && password.Any(char.IsLower)
+            && password.Any(char.IsDigit)
+            && password.Any(c => !char.IsLetterOrDigit(c) && !char.IsWhiteSpace(c));
 }
 
 /// <summary>Validates login requests and prevents simultaneous second-factor credentials.</summary>
@@ -55,12 +61,19 @@ public sealed class LoginCommandValidator : AbstractValidator<LoginCommand>
             .MinimumLength(8)
             .WithMessage("The new password needs to have at least 8 characters.")
             .WithErrorCode("UNPROCESSABLE_ENTITY")
-            .Must(pwd => pwd.All(c => char.IsLetter(c) || char.IsDigit(c) || char.IsUpper(c) || char.IsLower(c) || char.IsSymbol(c)))
+            .Must(HasRequiredPasswordCharacters)
             .WithErrorCode("UNPROCESSABLE_ENTITY")
             .WithMessage("The password must have at least one letter upper and lower case, one digit and one special character");
         RuleFor(x => x).Must(x => string.IsNullOrWhiteSpace(x.TwoFactorCode) || string.IsNullOrWhiteSpace(x.TwoFactorRecoveryCode))
             .WithMessage("Only one two-factor authentication code may be supplied.");
     }
+
+    private static bool HasRequiredPasswordCharacters(string? password)
+        => string.IsNullOrEmpty(password)
+            || password.Any(char.IsUpper)
+            && password.Any(char.IsLower)
+            && password.Any(char.IsDigit)
+            && password.Any(c => !char.IsLetterOrDigit(c) && !char.IsWhiteSpace(c));
 }
 
 /// <summary>Validates refresh-token requests.</summary>
@@ -114,7 +127,7 @@ public sealed class ForgotPasswordCommandValidator : AbstractValidator<ForgotPas
             .EmailAddress()
             .WithErrorCode("UNPROCESSABLE_ENTITY")
             .WithMessage("The email address needs to be valid.");
-} 
+}
 
 /// <summary>Validates password reset requests.</summary>
 public sealed class ResetPasswordCommandValidator : AbstractValidator<ResetPasswordCommand>
@@ -133,18 +146,24 @@ public sealed class ResetPasswordCommandValidator : AbstractValidator<ResetPassw
             .NotEmpty()
             .WithErrorCode("BAD_REQUEST")
             .WithMessage("The reset code cannot be empty");
-        RuleFor(x => x
-            .NewPassword)
+        RuleFor(x => x.NewPassword)
             .NotEmpty()
             .WithErrorCode("BAD_REQUEST")
             .WithMessage("The new password cannot be null or empty.")
             .MinimumLength(8)
             .WithMessage("The new password needs to have at least 8 characters.")
             .WithErrorCode("UNPROCESSABLE_ENTITY")
-            .Must(pwd => pwd.All(c => char.IsLetter(c) || char.IsDigit(c) || char.IsUpper(c) || char.IsLower(c) || char.IsSymbol(c)))
+            .Must(HasRequiredPasswordCharacters)
             .WithErrorCode("UNPROCESSABLE_ENTITY")
             .WithMessage("The password must have at least one letter upper and lower case, one digit and one special character");
     }
+
+    private static bool HasRequiredPasswordCharacters(string? password)
+        => string.IsNullOrEmpty(password)
+            || password.Any(char.IsUpper)
+            && password.Any(char.IsLower)
+            && password.Any(char.IsDigit)
+            && password.Any(c => !char.IsLetterOrDigit(c) && !char.IsWhiteSpace(c));
 }
 
 /// <summary>Validates identity information update requests.</summary>
@@ -159,5 +178,3 @@ public sealed class UpdateIdentityInfoCommandValidator : AbstractValidator<Updat
         RuleFor(x => x.NewPassword).MinimumLength(8).When(x => !string.IsNullOrWhiteSpace(x.NewPassword));
     }
 }
-
- 

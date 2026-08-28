@@ -1,0 +1,205 @@
+@page "/settings"
+@implements IDisposable
+
+<PageTitle>Settings</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="pa-4">
+    <MudPaper Elevation="2" Class="pa-6">
+        <MudStack Spacing="3">
+            <MudText Typo="Typo.h4">Translation Provider Settings</MudText>
+            <MudText Typo="Typo.body1">
+                Configure the credentials used by each translation provider and review available usage information.
+            </MudText>
+
+            <MudTabs Rounded="true" Elevation="1" TabPanelsClass="pa-4">
+                <MudTabPanel Text="Google Cloud Translation" Icon="@Icons.Material.Filled.Translate">
+                    <MudStack Spacing="3">
+                        <MudText Typo="Typo.h6">Google Cloud Translation</MudText>
+
+                        <MudTextField @bind-Value="googleApiKey"
+                                      Label="API key"
+                                      InputType="InputType.Password"
+                                      Variant="Variant.Outlined"
+                                      FullWidth="true"
+                                      HelperText="The key is stored by the server and is never displayed in full." />
+
+                        <MudStack Row="true" Spacing="2">
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       Disabled="@isSaving"
+                                       OnClick="SaveGoogleSettingsAsync"
+                                       StartIcon="@Icons.Material.Filled.Save">
+                                @(isSaving ? "Saving..." : "Save API key")
+                            </MudButton>
+
+                            <MudButton Variant="Variant.Outlined"
+                                       Disabled="@isLoadingUsage"
+                                       OnClick="LoadGoogleUsageAsync"
+                                       StartIcon="@Icons.Material.Filled.Refresh">
+                                Refresh usage
+                            </MudButton>
+                        </MudStack>
+
+                        @if (!string.IsNullOrWhiteSpace(googleMaskedApiKey))
+                        {
+                            <MudAlert Severity="Severity.Success" Variant="Variant.Outlined">
+                                Google Cloud Translation is configured: @googleMaskedApiKey
+                            </MudAlert>
+                        }
+
+                        @if (googleUsage is not null)
+                        {
+                            <MudGrid>
+                                <MudItem xs="12" sm="6">
+                                    <MudPaper Class="pa-4" Outlined="true">
+                                        <MudText Typo="Typo.caption">Characters used this application instance</MudText>
+                                        <MudText Typo="Typo.h6">@(googleUsage.UsedCharacters?.ToString("N0") ?? "N/A")</MudText>
+                                    </MudPaper>
+                                </MudItem>
+                                <MudItem xs="12" sm="6">
+                                    <MudPaper Class="pa-4" Outlined="true">
+                                        <MudText Typo="Typo.caption">Estimated remaining monthly free characters</MudText>
+                                        <MudText Typo="Typo.h6">@(googleUsage.RemainingCharacters?.ToString("N0") ?? "N/A")</MudText>
+                                    </MudPaper>
+                                </MudItem>
+                            </MudGrid>
+
+                            @if (!string.IsNullOrWhiteSpace(googleUsage.Message))
+                            {
+                                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                                    @googleUsage.Message
+                                </MudAlert>
+                            }
+                        }
+                    </MudStack>
+                </MudTabPanel>
+            </MudTabs>
+
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                    @errorMessage
+                </MudAlert>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(successMessage))
+            {
+                <MudAlert Severity="Severity.Success" Variant="Variant.Outlined">
+                    @successMessage
+                </MudAlert>
+            }
+        </MudStack>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private readonly CancellationTokenSource cancellationTokenSource = new();
+    private string googleApiKey = string.Empty;
+    private string? googleMaskedApiKey;
+    private LocalizationProviderUsageResponse? googleUsage;
+    private string? errorMessage;
+    private string? successMessage;
+    private bool isSaving;
+    private bool isLoadingUsage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            Response<LocalizationProviderSettingsResponse> result = await Mediator.Send(
+                new GetLocalizationProviderSettingsQuery("google"),
+                cancellationTokenSource.Token);
+
+            if (result.Succeeded && result.Data is not null)
+            {
+                googleMaskedApiKey = result.Data.MaskedApiKey;
+            }
+
+            await LoadGoogleUsageAsync();
+        }
+        catch (OperationCanceledException) when (cancellationTokenSource.IsCancellationRequested)
+        {
+        }
+    }
+
+    private async Task SaveGoogleSettingsAsync()
+    {
+        errorMessage = null;
+        successMessage = null;
+        isSaving = true;
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(googleApiKey))
+            {
+                errorMessage = "Enter a Google Cloud Translation API key.";
+                return;
+            }
+
+            Response<LocalizationProviderSettingsResponse> result = await Mediator.Send(
+                new UpdateLocalizationProviderSettingsCommand("google", googleApiKey),
+                cancellationTokenSource.Token);
+
+            if (!result.Succeeded || result.Data is null)
+            {
+                errorMessage = result.Errors.Count > 0
+                    ? string.Join(" ", result.Errors)
+                    : "The Google Cloud Translation settings could not be updated.";
+                return;
+            }
+
+            googleMaskedApiKey = result.Data.MaskedApiKey;
+            googleApiKey = string.Empty;
+            successMessage = "The Google Cloud Translation API key was updated and the translator configuration was refreshed.";
+        }
+        catch (OperationCanceledException) when (cancellationTokenSource.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            errorMessage = exception.Message;
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task LoadGoogleUsageAsync()
+    {
+        errorMessage = null;
+        isLoadingUsage = true;
+
+        try
+        {
+            Response<LocalizationProviderUsageResponse> result = await Mediator.Send(
+                new GetLocalizationProviderUsageQuery("google"),
+                cancellationTokenSource.Token);
+
+            googleUsage = result.Data;
+            if (!result.Succeeded)
+            {
+                errorMessage = result.Errors.Count > 0
+                    ? string.Join(" ", result.Errors)
+                    : "Google Cloud Translation usage information could not be loaded.";
+            }
+        }
+        catch (OperationCanceledException) when (cancellationTokenSource.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            errorMessage = exception.Message;
+        }
+        finally
+        {
+            isLoadingUsage = false;
+        }
+    }
+
+    public void Dispose()
+    {
+        cancellationTokenSource.Cancel();
+        cancellationTokenSource.Dispose();
+    }
+}

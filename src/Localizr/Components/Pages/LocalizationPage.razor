@@ -1,0 +1,160 @@
+@page "/localization" 
+@implements IDisposable
+
+<PageTitle>Resource Localization</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="pa-4">
+    <MudPaper Elevation="2" Class="pa-6">
+        <MudStack Spacing="3">
+            <MudText Typo="Typo.h4">Resource Localization</MudText>
+            <MudText Typo="Typo.body1">Translate a JSON resource to a target culture.</MudText>
+
+            <MudFileUpload T="IBrowserFile"
+                           FilesChanged="LoadResourceAsync"
+                           Accept=".json,application/json"
+                           MaxFileSize="@MaxFileSize">
+                <CustomContent>
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               OnClick="@context.OpenFilePickerAsync"
+                               StartIcon="@Icons.Material.Filled.UploadFile">
+                        Select neutral JSON resource
+                    </MudButton>
+                </CustomContent>
+                <SelectedTemplate>
+                    @if (context is not null)
+                    {
+                        <MudText Typo="Typo.caption">Selected: @context.Name</MudText>
+                    }
+                </SelectedTemplate>
+            </MudFileUpload>
+
+            <MudTextField @bind-Value="resourceJson"
+                          Label="Resource JSON"
+                          Lines="12"
+                          Variant="Variant.Outlined"
+                          FullWidth="true" />
+
+            <MudTextField @bind-Value="culture"
+                          Label="Target culture"
+                          Placeholder="pt-BR"
+                          Variant="Variant.Outlined"
+                          FullWidth="true" />
+
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       Disabled="@isTranslating"
+                       OnClick="TranslateAsync"
+                       StartIcon="@Icons.Material.Filled.Translate">
+                @(isTranslating ? "Translating..." : "Translate")
+            </MudButton>
+
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                    @errorMessage
+                </MudAlert>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(translatedJson))
+            {
+                <MudText Typo="Typo.h6">Translated resource</MudText>
+                <MudTextField Value="translatedJson"
+                              Lines="12"
+                              Variant="Variant.Outlined"
+                              ReadOnly="true"
+                              FullWidth="true" />
+            }
+        </MudStack>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private const long MaxFileSize = 1_048_576;
+    private readonly CancellationTokenSource cancellationTokenSource = new();
+    private string resourceJson = "{\n  \"Hello\": \"Hello world\"\n}";
+    private string culture = "pt-BR";
+    private string? translatedJson;
+    private string? errorMessage;
+    private bool isTranslating;
+
+    private async Task LoadResourceAsync(IBrowserFile file)
+    {
+        errorMessage = null;
+        translatedJson = null;
+
+        if (!string.Equals(Path.GetExtension(file.Name), ".json", StringComparison.OrdinalIgnoreCase))
+        {
+            errorMessage = "Only JSON resource files are supported.";
+            return;
+        }
+
+        try
+        {
+            await using Stream stream = file.OpenReadStream(MaxFileSize, cancellationTokenSource.Token);
+            using StreamReader reader = new(stream);
+            resourceJson = await reader.ReadToEndAsync(cancellationTokenSource.Token);
+        }
+        catch (IOException exception)
+        {
+            errorMessage = $"The resource file could not be read: {exception.Message}";
+        }
+        catch (OperationCanceledException) when (cancellationTokenSource.IsCancellationRequested)
+        {
+            // The component is being disposed, so no user-facing error is required.
+        }
+    }
+
+    private async Task TranslateAsync()
+    {
+        errorMessage = null;
+        translatedJson = null;
+        isTranslating = true;
+
+        try
+        {
+            Dictionary<string, string>? resources =
+                System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(resourceJson);
+
+            if (resources is null || resources.Count == 0)
+            {
+                errorMessage = "The JSON resource must contain at least one key/value entry.";
+                return;
+            }
+
+            Response<TranslateResourceResponse> result = await Mediator.Send(
+                new TranslateResourceCommand(resources, culture),
+                cancellationTokenSource.Token);
+
+            if (!result.Succeeded || result.Data is null)
+            {
+                errorMessage = result.Errors.Count > 0
+                    ? string.Join(" ", result.Errors)
+                    : "Translation failed.";
+                return;
+            }
+
+            translatedJson = System.Text.Json.JsonSerializer.Serialize(
+                result.Data.Resources,
+                new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            errorMessage = "The resource is not valid JSON or does not contain string values.";
+        }
+        catch (OperationCanceledException) when (cancellationTokenSource.IsCancellationRequested)
+        {
+            // The component is being disposed, so no user-facing error is required.
+        }
+        finally
+        {
+            isTranslating = false;
+        }
+    }
+
+    public void Dispose()
+    {
+        cancellationTokenSource.Cancel();
+        cancellationTokenSource.Dispose();
+    }
+}

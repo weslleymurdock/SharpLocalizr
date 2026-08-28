@@ -19,9 +19,20 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.11" />
-    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.24.1-preview.1" />
-    <PackageReference Include="MudBlazor" Version="9.8.0" />
-    <PackageReference Include="Scalar.AspNetCore" Version="2.16.20" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.23.0" />
+    <PackageReference Include="MudBlazor" Version="9.9.0" />
+    <PackageReference Include="Scalar.AspNetCore" Version="2.17.1" />
   </ItemGroup>
+
+  <Target Name="AddMigration">
+   <PropertyGroup>
+     <MigrationOutput Condition="'$(MigrationOutput)' == ''">Persistence/Migrations</MigrationOutput>
+     <IsVerbose Condition="'$(IsVerbose)' != ''">-v</IsVerbose>
+   </PropertyGroup>
+   <Error Condition="'$(Name)' == ''" Text="The 'Name' param is mandatory; Usage example: dotnet build -t:AddMigrationUI -p:Name=MyMigration" />
+   <Message Text="Running: dotnet ef migrations add $(Name) --framework net10.0-windows10.0.19041.0 --output-dir $(MigrationOutput)" Importance="High" />
+   <Exec Command="dotnet ef migrations add $(Name) --project .\..\Localizr.Infrastructure\ --startup-project . --output-dir $(MigrationOutput) $(IsVerbose)" ContinueOnError="false" />
+   <Message Text="Migration process completed!" Importance="High" />
+  </Target>
 
 </Project>
