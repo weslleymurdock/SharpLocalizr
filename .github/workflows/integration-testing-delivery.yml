@@ -77,7 +77,7 @@ jobs:
         if: always()
         shell: pwsh
         run: |
-          $coverageFile = Join-Path $env:GITHUB_WORKSPACE 'artifacts/test-results/Cobertura.xml'
+          $coverageFile = Join-Path $env:GITHUB_WORKSPACE 'artifacts/coverage/Cobertura.xml'
 
           if (-not (Test-Path $coverageFile)) {
             "## Coverage gate`n`nThe filtered ReportGenerator Cobertura report was not produced." | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
